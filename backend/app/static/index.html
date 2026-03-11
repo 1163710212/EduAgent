@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Edu-Agent Client</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+
+<body>
+  <header class="hero">
+    <p class="kicker">Edu-Agent Lab</p>
+    <h1>Edu-Agent 教育智能体客户端</h1>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>① 生成挑战</h2>
+      <div class="row">
+        <label>Repo URL</label>
+        <input id="repoUrl" placeholder="https://github.com/OWNER/REPO" />
+      </div>
+      <div class="row">
+        <label>Ref</label>
+        <input id="ref" value="main" />
+      </div>
+      <div class="row">
+        <label>Language</label>
+        <select id="language">
+          <option value="python" selected>python</option>
+          <option value="javascript">javascript</option>
+          <option value="java">java</option>
+          <option value="go">go</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>Task Type</label>
+        <select id="taskType">
+          <option value="rewrite" selected>rewrite（代码改写理解）</option>
+          <option value="blank_fill">blank_fill（逻辑补全）</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>File path</label>
+        <input id="filePath" placeholder="例如: src/main.py（留空则自动挑选）" />
+      </div>
+      <button id="btnCreate">生成挑战</button>
+      <pre id="createLog" class="log"></pre>
+
+      <div id="challengeView" class="challenge-view hidden">
+        <div class="challenge-header">
+          <h3 id="challengeTitle">挑战详情</h3>
+          <div class="challenge-meta">
+            <span id="challengeTaskType" class="pill"></span>
+            <span id="challengeLanguage" class="pill"></span>
+            <span id="challengeSession" class="pill"></span>
+          </div>
+        </div>
+
+        <div class="artifact-block">
+          <h4>学生任务说明</h4>
+          <pre id="challengeInstructions" class="artifact-text"></pre>
+        </div>
+
+        <div class="artifact-block">
+          <h4>挑战文件</h4>
+          <ul id="challengeFiles" class="file-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>② 学生完成</h2>
+      <div class="row">
+        <label>Session ID</label>
+        <input id="sessionId" placeholder="生成后自动填入" />
+      </div>
+
+      <div id="filesArea" class="files-area hidden">
+        <div class="row">
+          <label>文件（只读）</label>
+          <select id="fileSelect"></select>
+        </div>
+        <textarea id="codeViewer" class="code readonly" spellcheck="false" readonly></textarea>
+      </div>
+
+      <div id="rewriteAnswerArea" class="answer-area hidden">
+        <div class="row">
+          <label>解释</label>
+        </div>
+        <textarea id="explanation" class="explain"
+          placeholder="请解释 EXPLAIN_TARGET_START/END 标记片段的语义、控制流与设计意图。"></textarea>
+      </div>
+
+      <div id="blankFillAnswerArea" class="answer-area hidden">
+        <div class="row">
+          <label>补全代码</label>
+        </div>
+        <textarea id="completionCode" class="code-snippet" spellcheck="false"
+          placeholder="请输入用于替换 BLANK 标记区域的完整代码片段。"></textarea>
+      </div>
+
+      <button id="btnSubmit">提交并评估</button>
+      <pre id="submitLog" class="log"></pre>
+    </section>
+
+    <section class="card">
+      <h2>③ 评估结果</h2>
+      <div id="report" class="report"></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+
+</html>
