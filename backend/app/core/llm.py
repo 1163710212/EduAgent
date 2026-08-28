@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 from typing import Any, Generic, TypeVar
 
 import requests
@@ -11,7 +12,7 @@ from pydantic import BaseModel
 from app.core.config import settings
 
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
-DEFAULT_LOCAL_LLM_URL = "http://127.0.0.1:6011/api/generate"
+DEFAULT_LOCAL_LLM_URL = "http://127.0.0.1:6012"
 LOCAL_LLM_TIMEOUT_SECONDS = 180
 
 
@@ -214,11 +215,76 @@ class LocalLlama3Model:
 
     @staticmethod
     def _resolve_base_url() -> str:
-        # configured = (settings.OPENAI_BASE_URL or "").strip()
-        # if not configured:
-        #     return DEFAULT_LOCAL_LLM_URL
-        # return configured.rstrip("/")
-        return DEFAULT_LOCAL_LLM_URL
+        configured = (settings.OPENAI_BASE_URL or "").strip()
+        if not configured:
+            return DEFAULT_LOCAL_LLM_URL
+        return configured.rstrip("/")
+
+    @staticmethod
+    def _response_error_detail(response: requests.Response) -> str:
+        try:
+            data = response.json()
+        except Exception:
+            data = None
+
+        if isinstance(data, dict):
+            for key in ("error", "detail", "message"):
+                value = data.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()[:800]
+                if isinstance(value, dict):
+                    message = value.get("message")
+                    if isinstance(message, str) and message.strip():
+                        return message.strip()[:800]
+
+        text = (response.text or "").strip().replace("\n", " ")
+        return text[:800] or "empty response body"
+
+    @classmethod
+    def _raise_for_status(cls, response: requests.Response) -> None:
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as exc:
+            detail = cls._response_error_detail(response)
+            raise RuntimeError(
+                f"LLM request failed with HTTP {response.status_code}: {detail}"
+            ) from exc
+
+    @classmethod
+    def _post_with_retry(
+        cls,
+        url: str,
+        *,
+        payload: dict[str, Any],
+        headers: dict[str, str] | None = None,
+    ) -> requests.Response:
+        max_retries = max(0, int(getattr(settings, "LLM_HTTP_MAX_RETRIES", 2) or 0))
+        backoff = max(
+            0.0,
+            float(getattr(settings, "LLM_HTTP_RETRY_BACKOFF_SECONDS", 1.0) or 0.0),
+        )
+
+        for attempt in range(max_retries + 1):
+            try:
+                response = requests.post(
+                    url,
+                    json=payload,
+                    headers=headers,
+                    timeout=LOCAL_LLM_TIMEOUT_SECONDS,
+                )
+            except (requests.ConnectionError, requests.Timeout) as exc:
+                if attempt >= max_retries:
+                    raise RuntimeError(
+                        f"LLM request failed after {attempt + 1} attempts: {exc}"
+                    ) from exc
+            else:
+                if response.status_code < 500 or attempt >= max_retries:
+                    return response
+
+            if backoff > 0:
+                time.sleep(backoff * (2**attempt))
+
+        raise RuntimeError("LLM request failed without a response.")
 
     @staticmethod
     def _extract_chat_completion_text(data: dict[str, Any]) -> str:
@@ -262,7 +328,9 @@ class LocalLlama3Model:
         return f"{base_url}/v1/chat/completions"
 
     def invoke(self, prompt: str) -> str:
-        model = "llama3.1"
+        model = (settings.OPENAI_MODEL or "").strip()
+        if not model:
+            raise ValueError("OPENAI_MODEL is not configured.")
         base_url = self._resolve_base_url()
 
         if base_url.endswith("/api/generate"):
@@ -271,13 +339,24 @@ class LocalLlama3Model:
                 "prompt": prompt,
                 "stream": False,
             }
-            response = requests.post(base_url, json=payload)
-            # response.raise_for_status()
-            data = response.json()
+            response = self._post_with_retry(
+                base_url,
+                payload=payload,
+            )
+            self._raise_for_status(response)
+            try:
+                data = response.json()
+            except requests.JSONDecodeError as exc:
+                raise ValueError("Invalid generate response: body is not valid JSON.") from exc
+            if not isinstance(data, dict):
+                raise ValueError("Invalid generate response: expected a JSON object.")
             text = data.get("response")
-            print(f"mushxx{text}")
             if not isinstance(text, str):
-                raise ValueError("Invalid generate response: missing 'response' string field.")
+                detail = self._response_error_detail(response)
+                raise ValueError(
+                    "Invalid generate response: missing 'response' string field; "
+                    f"response keys={sorted(data.keys())}; detail={detail}"
+                )
             return text
 
         payload = {
@@ -290,14 +369,18 @@ class LocalLlama3Model:
         if settings.OPENAI_API_KEY:
             headers["Authorization"] = f"Bearer {settings.OPENAI_API_KEY}"
 
-        response = requests.post(
+        response = self._post_with_retry(
             self._chat_completions_url(base_url),
-            json=payload,
+            payload=payload,
             headers=headers,
-            timeout=LOCAL_LLM_TIMEOUT_SECONDS,
         )
-        response.raise_for_status()
-        data = response.json()
+        self._raise_for_status(response)
+        try:
+            data = response.json()
+        except requests.JSONDecodeError as exc:
+            raise ValueError("Invalid chat completion response: body is not valid JSON.") from exc
+        if not isinstance(data, dict):
+            raise ValueError("Invalid chat completion response: expected a JSON object.")
         return self._extract_chat_completion_text(data)
 
     async def ainvoke(self, prompt: str) -> str:

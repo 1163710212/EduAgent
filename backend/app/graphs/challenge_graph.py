@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import re
 import traceback
 from typing import List, Dict, Any
@@ -75,17 +76,21 @@ async def node_parse_repo(state: ChallengeState) -> ChallengeState:
         return state
 
 
-def _pick_paths_from_tree(tree: Any, language: str, max_files: int = 1) -> List[str]:
-    """
-    tree 返回结构随 MCP 实现而异，这里做尽量稳健的抽取。
-    """
-    exts = {
+def _language_extensions(language: str) -> List[str]:
+    return {
         "python": [".py"],
-        "javascript": [".js", ".ts"],
+        "javascript": [".js", ".ts", ".jsx", ".tsx"],
         "java": [".java"],
         "cpp": [".cpp", ".cc", ".cxx", ".h", ".hpp"],
         "go": [".go"],
     }.get(language.lower(), [".py"])
+
+
+def _pick_paths_from_tree(tree: Any, language: str, max_files: int = 1) -> List[str]:
+    """
+    tree 返回结构随 MCP 实现而异，这里做尽量稳健的抽取。
+    """
+    exts = _language_extensions(language)
 
     # 常见：{"tree": [{"path":"...","type":"blob"}, ...]}
     candidates: List[str] = []
@@ -109,6 +114,94 @@ def _pick_paths_from_tree(tree: Any, language: str, max_files: int = 1) -> List[
 
     # 兜底：如果没有 tree，返回空
     return candidates[:]
+
+
+def _extract_json_from_mcp_payload(payload: Any) -> Any | None:
+    """Decode JSON embedded in MCP text-content wrapper objects."""
+    if isinstance(payload, str):
+        try:
+            return json.loads(payload)
+        except Exception:
+            return None
+
+    if isinstance(payload, (list, tuple)):
+        for item in payload:
+            decoded = _extract_json_from_mcp_payload(item)
+            if decoded is not None:
+                return decoded
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    text = payload.get("text")
+    if isinstance(text, str):
+        decoded = _extract_json_from_mcp_payload(text)
+        if decoded is not None:
+            return decoded
+
+    for key in ("content", "data", "result", "payload", "output"):
+        decoded = _extract_json_from_mcp_payload(payload.get(key))
+        if decoded is not None:
+            return decoded
+    return None
+
+
+def _directory_entries(payload: Any) -> List[Dict[str, Any]]:
+    decoded = _extract_json_from_mcp_payload(payload)
+    if isinstance(decoded, dict):
+        decoded = decoded.get("items") or decoded.get("entries") or decoded.get("data") or []
+    if not isinstance(decoded, list):
+        return []
+    return [item for item in decoded if isinstance(item, dict)]
+
+
+async def _pick_paths_from_directory_listing(
+    state: ChallengeState,
+    github: GitHubMCP,
+    *,
+    max_files: int = 1,
+    max_directories: int = 24,
+    max_depth: int = 4,
+) -> List[str]:
+    """Breadth-first fallback for MCP servers without get_repository_tree."""
+    tool = github.tool("get_file_contents")
+    exts = _language_extensions(state.get("language", "python"))
+    queue: List[tuple[str, int]] = [("/", 0)]
+    candidates: List[str] = []
+    scanned = 0
+
+    while queue and scanned < max_directories and len(candidates) < max_files:
+        directory, depth = queue.pop(0)
+        scanned += 1
+        result = await tool.ainvoke(
+            {
+                "owner": state["owner"],
+                "repo": state["repo"],
+                "path": directory,
+                "ref": state.get("ref", "main"),
+                "fields": ["type", "name", "path", "size"],
+            }
+        )
+
+        child_directories: List[str] = []
+        for item in _directory_entries(result):
+            path = str(item.get("path") or item.get("name") or "").strip()
+            item_type = str(item.get("type") or "").lower()
+            if not path:
+                continue
+            if item_type in ("file", "blob") and any(path.lower().endswith(ext) for ext in exts):
+                if not re.search(r"(^|/)(__pycache__|node_modules|dist|build|venv|\.venv|\.git)(/|$)", path):
+                    candidates.append(path)
+                    if len(candidates) >= max_files:
+                        break
+            elif item_type in ("dir", "tree") and depth < max_depth:
+                if not re.search(r"(^|/)(\.[^/]+|__pycache__|node_modules|dist|build|venv|\.venv|\.git)(/|$)", path):
+                    child_directories.append(path)
+
+        queue.extend((path, depth + 1) for path in child_directories)
+
+    return candidates
 
 
 def _normalize_requested_paths(paths: List[str], *, max_files: int) -> List[str]:
@@ -212,7 +305,16 @@ async def node_select_files(state: ChallengeState, github: GitHubMCP) -> Challen
     except Exception:
         pass
 
-    # 2) search_code 兜底（用 GitHub 代码搜索语法）
+    # 2) Some hosted MCP configurations expose directory listing but not tree traversal.
+    try:
+        picked = await _pick_paths_from_directory_listing(state, github, max_files=1)
+        if picked:
+            state["target_paths"] = picked
+            return state
+    except Exception:
+        pass
+
+    # 3) search_code 兜底（用 GitHub 代码搜索语法）
     try:
         tool = github.tool("search_code")
         lang = state.get("language", "python").lower()
@@ -220,8 +322,9 @@ async def node_select_files(state: ChallengeState, github: GitHubMCP) -> Challen
         res = await tool.ainvoke({"query": query, "perPage": 5, "page": 1})
         # 常见：{"items":[{"path":"..."}]}
         paths: List[str] = []
-        if isinstance(res, dict):
-            items = res.get("items") or res.get("results") or []
+        decoded = _extract_json_from_mcp_payload(res)
+        if isinstance(decoded, dict):
+            items = decoded.get("items") or decoded.get("results") or []
             if isinstance(items, list):
                 for it in items:
                     if isinstance(it, dict) and it.get("path"):

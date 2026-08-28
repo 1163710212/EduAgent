@@ -60,8 +60,6 @@ def _build_grade_prompt(state: EvalState) -> str:
     ch = state["challenge"]
     task_type = _challenge_task_type(ch)
     blanks = ch.get("blanks", [])
-    print(f"blank{blanks,}")
-    print(state.get("explanation_md", ""))
 
     parts = [
         "You are a strict but fair senior engineering mentor. Grade the student's submission.",
@@ -114,7 +112,6 @@ async def node_llm_grade(state: EvalState) -> EvalState:
         llm = build_chat_model(temperature=0.1).with_structured_output(GradeArtifact)
 
         prompt = _build_grade_prompt(state)
-        print(prompt)
         grade: GradeArtifact = await llm.ainvoke(prompt)
     except Exception as e:
         state["error"] = f"Failed to evaluate submission: {e}"

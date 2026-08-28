@@ -18,7 +18,14 @@
 ## 快速开始（本地）
 1) 复制环境变量
 ```bash
-cp .env.example .env
-uvicorn app.main:app --host 127.0.0.1 --port 8001 --reload
+cp .env.example backend/.env
 
-ssh -p 34348 -L 8000:127.0.0.1:8000 root@connect.cqa1.seetacloud.com
+cd /data/choxia/EduAgent-main/backend
+source .venv-local/bin/activate
+uvicorn app.main:app --host 127.0.0.1 --port 8012 --reload
+
+#绑定远程端口 （venus9替换为实际节点）
+ssh -J choxia@access.ihpc.uts.edu.au -L 8000:127.0.0.1:8012 choxia@mimas2
+
+#本地访问
+http://127.0.0.1:8000/

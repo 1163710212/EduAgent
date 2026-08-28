@@ -2,7 +2,9 @@ import os
 import asyncio
 
 # 设置运行端口
-os.environ.update({'OLLAMA_HOST': 'http://127.0.0.1:6011'})
+os.environ.update({'OLLAMA_HOST': 'http://127.0.0.1:6012'})
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 async def run_process(cmd, verb=True, path=None):
     if path:

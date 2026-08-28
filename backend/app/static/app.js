@@ -16,6 +16,8 @@ const REQUIRED_ELEMENT_IDS = [
   "challengeInstructions",
   "challengeFiles",
   "sessionId",
+  "workspaceEmpty",
+  "answerWorkspace",
   "filesArea",
   "fileSelect",
   "codeViewer",
@@ -25,7 +27,9 @@ const REQUIRED_ELEMENT_IDS = [
   "completionCode",
   "btnSubmit",
   "submitLog",
-  "report"
+  "report",
+  "progressBar",
+  "progressLabel"
 ];
 
 let currentFiles = {}; // path -> content (read-only challenge files)
@@ -42,12 +46,109 @@ function ensureRequiredElements() {
   return true;
 }
 
-function setLog(el, obj) {
+function setLog(el, obj, status = "") {
   el.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+  if (status) {
+    el.dataset.status = status;
+  } else {
+    delete el.dataset.status;
+  }
+}
+
+function refreshIcons() {
+  // Phosphor icons are rendered by the icon font stylesheet.
+}
+
+function makeIcon(name) {
+  const icon = document.createElement("i");
+  const icons = {
+    "code-2": "code",
+    "chart-no-axes-column-increasing": "chart-bar",
+    "chart-spline": "chart-line",
+    "messages-square": "chats-circle",
+    route: "path"
+  };
+  icon.className = `ph-duotone ph-${icons[name] || name}`;
+  icon.setAttribute("aria-hidden", "true");
+  return icon;
+}
+
+function setButtonLoading(button, isLoading, loadingLabel) {
+  if (!button.dataset.defaultLabel) {
+    button.dataset.defaultLabel = button.querySelector("span")?.textContent || button.textContent;
+  }
+  button.disabled = isLoading;
+  button.setAttribute("aria-busy", String(isLoading));
+  const label = button.querySelector("span");
+  if (label) label.textContent = isLoading ? loadingLabel : button.dataset.defaultLabel;
+  const existingSpinner = button.querySelector(".spinner");
+  const icon = button.querySelector("i[class*='ph-']");
+  if (isLoading && !existingSpinner) {
+    if (icon) icon.classList.add("hidden");
+    const spinner = document.createElement("span");
+    spinner.className = "spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    button.appendChild(spinner);
+  } else if (!isLoading && existingSpinner) {
+    existingSpinner.remove();
+    if (icon) icon.classList.remove("hidden");
+  }
+}
+
+function showToast(message) {
+  const toast = $("toast");
+  if (!toast) return;
+  toast.querySelector("span").textContent = message;
+  toast.classList.add("show");
+  window.clearTimeout(showToast.timer);
+  showToast.timer = window.setTimeout(() => toast.classList.remove("show"), 2600);
+}
+
+function updateProgress(stage) {
+  const order = ["create", "workspace", "evaluation"];
+  const icons = { create: "plus", workspace: "code-2", evaluation: "chart-no-axes-column-increasing" };
+  const labels = {
+    create: "Ready",
+    workspace: "In progress",
+    evaluation: "Complete"
+  };
+  const widths = { create: "14%", workspace: "56%", evaluation: "100%" };
+  const activeIndex = Math.max(0, order.indexOf(stage));
+
+  $("progressBar").style.width = widths[stage] || widths.create;
+  $("progressLabel").textContent = labels[stage] || labels.create;
+  document.querySelectorAll("[data-progress-step]").forEach((item) => {
+    const itemIndex = order.indexOf(item.dataset.progressStep);
+    item.classList.toggle("current", itemIndex === activeIndex);
+    item.classList.toggle("complete", itemIndex < activeIndex);
+    const indicator = item.querySelector(".step-indicator");
+    if (indicator) {
+      clearElement(indicator);
+      indicator.appendChild(makeIcon(itemIndex < activeIndex ? "check" : icons[item.dataset.progressStep]));
+    }
+  });
+  refreshIcons();
+}
+
+function resetReport() {
+  const report = $("report");
+  clearElement(report);
+  const empty = document.createElement("div");
+  empty.className = "empty-state compact";
+  const emptyIcon = document.createElement("span");
+  emptyIcon.className = "empty-icon";
+  emptyIcon.appendChild(makeIcon("chart-spline"));
+  const heading = document.createElement("h3");
+  heading.textContent = "Feedback appears here.";
+  const copy = document.createElement("p");
+  copy.textContent = "Submit your response to see a score, details, and next steps.";
+  empty.append(emptyIcon, heading, copy);
+  report.appendChild(empty);
+  refreshIcons();
 }
 
 function validateRepoUrl(repoUrl) {
-  if (!repoUrl) return "请填写 Repo URL（示例: https://github.com/OWNER/REPO）";
+  if (!repoUrl) return "Enter a repository URL, such as github.com/owner/repo.";
   const patterns = [
     /^https?:\/\/(www\.)?github\.com\/[^/\s]+\/[^/\s]+(?:\/.*)?$/i,
     /^(www\.)?github\.com\/[^/\s]+\/[^/\s]+(?:\/.*)?$/i,
@@ -55,7 +156,7 @@ function validateRepoUrl(repoUrl) {
     /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:\.git)?$/i
   ];
   if (!patterns.some((p) => p.test(repoUrl))) {
-    return "Repo URL 仅支持 GitHub 仓库（可用 https://github.com/OWNER/REPO 或 git@github.com:OWNER/REPO.git）";
+    return "Use a GitHub URL or owner/repository path.";
   }
   return "";
 }
@@ -90,7 +191,7 @@ function cloneFiles(files) {
 }
 
 function resetChallengeView() {
-  $("challengeTitle").textContent = "挑战详情";
+  $("challengeTitle").textContent = "Challenge details";
   $("challengeTaskType").textContent = "";
   $("challengeLanguage").textContent = "";
   $("challengeSession").textContent = "";
@@ -106,18 +207,26 @@ function resetStudentWorkspace() {
   currentChallenge = null;
 
   $("filesArea").classList.add("hidden");
+  $("answerWorkspace").classList.add("hidden");
+  $("workspaceEmpty").classList.remove("hidden");
   $("fileSelect").innerHTML = "";
   $("codeViewer").value = "";
   $("rewriteAnswerArea").classList.add("hidden");
   $("blankFillAnswerArea").classList.add("hidden");
   $("explanation").value = "";
   $("completionCode").value = "";
+  $("explanationCount").textContent = "0 chars";
+  $("completionCount").textContent = "0 lines";
+  updateProgress("create");
 }
 
 function setAnswerMode(taskType) {
   const isRewrite = taskType === "rewrite";
+  $("workspaceEmpty").classList.add("hidden");
+  $("answerWorkspace").classList.remove("hidden");
   $("rewriteAnswerArea").classList.toggle("hidden", !isRewrite);
   $("blankFillAnswerArea").classList.toggle("hidden", isRewrite);
+  updateProgress("workspace");
 }
 
 function switchViewerToPath(path) {
@@ -134,11 +243,11 @@ function renderChallengeArtifact(data) {
     return;
   }
 
-  $("challengeTitle").textContent = data.title || "未命名挑战";
+  $("challengeTitle").textContent = data.title || "Untitled challenge";
   $("challengeTaskType").textContent = `task: ${data.task_type || "unknown"}`;
   $("challengeLanguage").textContent = `lang: ${data.language || "unknown"}`;
   $("challengeSession").textContent = `session: ${data.session_id || "-"}`;
-  $("challengeInstructions").textContent = data.student_instructions_md || "(无说明)";
+  $("challengeInstructions").textContent = data.student_instructions_md || "No brief provided.";
 
   const files = data.files && typeof data.files === "object" ? data.files : {};
   const fileList = $("challengeFiles");
@@ -147,7 +256,7 @@ function renderChallengeArtifact(data) {
 
   if (paths.length === 0) {
     const li = document.createElement("li");
-    li.textContent = "无文件";
+    li.textContent = "No files";
     fileList.appendChild(li);
   } else {
     for (const path of paths) {
@@ -164,14 +273,17 @@ function renderChallengeArtifact(data) {
 
       const stats = document.createElement("span");
       stats.className = "file-stats";
-      stats.textContent = `${countLines(content)} 行 / ${String(content).length} 字符`;
+      stats.textContent = `${countLines(content)} lines / ${String(content).length} chars`;
       summary.appendChild(stats);
 
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "ghost-btn";
-      btn.textContent = "查看代码";
-      btn.onclick = () => switchViewerToPath(path);
+      btn.textContent = "View code";
+      btn.onclick = () => {
+        switchViewerToPath(path);
+        document.querySelector("#workspace").scrollIntoView({ behavior: "smooth", block: "start" });
+      };
 
       li.appendChild(summary);
       li.appendChild(btn);
@@ -180,23 +292,74 @@ function renderChallengeArtifact(data) {
   }
 
   $("challengeView").classList.remove("hidden");
+  refreshIcons();
 }
 
 function renderReport(evaluation) {
   const report = $("report");
   const taskType = evaluation.task_type || currentTaskType || "unknown";
-  const passLabel = taskType === "blank_fill" ? "BLANK 是否通过" : "任务规则是否通过";
-  const md = [
-    `任务类型: ${taskType}`,
-    `总分: ${evaluation.total_score}/100`,
-    `${passLabel}: ${evaluation.passed_blanks}`,
-    "",
-    evaluation.feedback_md || "",
-    "",
-    "建议:",
-    ...(evaluation.suggestions || []).map((s) => `- ${s}`)
-  ].join("\n");
-  report.textContent = md;
+  const passLabel = taskType === "blank_fill" ? "Blank passed" : "Rules passed";
+  const score = Number.isFinite(Number(evaluation.total_score)) ? Number(evaluation.total_score) : 0;
+  const suggestions = Array.isArray(evaluation.suggestions) ? evaluation.suggestions : [];
+  clearElement(report);
+
+  const summary = document.createElement("div");
+  summary.className = "report-summary";
+
+  const scoreCard = document.createElement("div");
+  scoreCard.className = "score-card";
+  const scoreLabel = document.createElement("div");
+  scoreLabel.className = "score-label";
+  scoreLabel.append(document.createTextNode("Overall score"), makeIcon("gauge"));
+  const scoreValue = document.createElement("div");
+  scoreValue.className = "score-value";
+  scoreValue.append(document.createTextNode(String(score)), Object.assign(document.createElement("small"), { textContent: "/100" }));
+  const scoreStatus = document.createElement("span");
+  scoreStatus.className = "score-status";
+  scoreStatus.textContent = score >= 80 ? "Strong result" : score >= 60 ? "Keep building" : "Review again";
+  scoreCard.append(scoreLabel, scoreValue, scoreStatus);
+
+  const feedbackCard = document.createElement("div");
+  feedbackCard.className = "feedback-card";
+  const feedbackTitle = document.createElement("h3");
+  feedbackTitle.append(makeIcon("messages-square"), document.createTextNode("AI feedback"));
+  const feedback = document.createElement("pre");
+  feedback.className = "feedback-content";
+  feedback.textContent = evaluation.feedback_md || "No detailed feedback yet.";
+  const meta = document.createElement("div");
+  meta.className = "report-meta";
+  const taskPill = document.createElement("span");
+  taskPill.className = "pill";
+  taskPill.textContent = `task: ${taskType}`;
+  const passPill = document.createElement("span");
+  passPill.className = "pill";
+  passPill.textContent = `${passLabel}: ${String(evaluation.passed_blanks ?? "-")}`;
+  meta.append(taskPill, passPill);
+  feedbackCard.append(feedbackTitle, feedback, meta);
+
+  const suggestionsCard = document.createElement("div");
+  suggestionsCard.className = "suggestions-card";
+  const suggestionsTitle = document.createElement("h3");
+  suggestionsTitle.append(makeIcon("route"), document.createTextNode("Next steps"));
+  const suggestionList = document.createElement("ul");
+  suggestionList.className = "suggestion-list";
+  const items = suggestions.length ? suggestions : ["Review the brief and restate the key logic in your own words."];
+  items.forEach((suggestion, index) => {
+    const item = document.createElement("li");
+    const number = document.createElement("span");
+    number.className = "suggestion-number";
+    number.textContent = String(index + 1).padStart(2, "0");
+    const copy = document.createElement("span");
+    copy.textContent = String(suggestion);
+    item.append(number, copy);
+    suggestionList.appendChild(item);
+  });
+  suggestionsCard.append(suggestionsTitle, suggestionList);
+
+  summary.append(scoreCard, feedbackCard, suggestionsCard);
+  report.appendChild(summary);
+  updateProgress("evaluation");
+  refreshIcons();
 }
 
 function loadFileOptions(files) {
@@ -243,7 +406,7 @@ function normalizeCompletionLines(completionCode, baseIndent) {
     .replace(/\r/g, "\n")
     .replace(/^\n+|\n+$/g, "");
   if (!/\S/.test(normalized)) {
-    throw new Error("补全代码不能为空");
+    throw new Error("Code completion cannot be empty.");
   }
 
   const rawLines = normalized.split("\n");
@@ -278,7 +441,7 @@ function joinContentLines(lines, hasTrailingNewline) {
 function applyCompletionToContent(content, completionCode, blankId) {
   const { lines, hasTrailingNewline } = splitContentLines(content);
   if (lines.length === 0) {
-    throw new Error("挑战文件为空，无法补全。");
+    throw new Error("The challenge file is empty.");
   }
 
   const startRe = markerRegex("BLANK_START", blankId);
@@ -320,14 +483,14 @@ function applyCompletionToContent(content, completionCode, blankId) {
     return joinContentLines(lines, hasTrailingNewline);
   }
 
-  throw new Error("未找到可替换的 BLANK 标记区域。");
+  throw new Error("No replaceable BLANK region was found.");
 }
 
 function buildFilledFilesForBlankFill() {
   const files = cloneFiles(currentFiles);
   const blanks = Array.isArray(currentChallenge?.blanks) ? currentChallenge.blanks : [];
   if (blanks.length > 1) {
-    throw new Error("当前版本仅支持 1 个 BLANK 区域。");
+    throw new Error("This version supports one BLANK region per challenge.");
   }
 
   const blank = blanks[0] && typeof blanks[0] === "object" ? blanks[0] : {};
@@ -336,7 +499,7 @@ function buildFilledFilesForBlankFill() {
     targetPath = Object.keys(files).find((path) => /BLANK_START|BLANK:[A-Za-z0-9_\-]+/.test(files[path] || ""));
   }
   if (!targetPath || !Object.prototype.hasOwnProperty.call(files, targetPath)) {
-    throw new Error("未找到包含 BLANK 标记的挑战文件。");
+    throw new Error("No challenge file contains a BLANK marker.");
   }
 
   files[targetPath] = applyCompletionToContent(files[targetPath], $("completionCode").value, blank.blank_id || "");
@@ -345,9 +508,9 @@ function buildFilledFilesForBlankFill() {
 
 function bindEventHandlers() {
   $("btnCreate").onclick = async () => {
-    $("createLog").textContent = "请求中...";
+    $("createLog").textContent = "";
     $("submitLog").textContent = "";
-    $("report").textContent = "";
+    resetReport();
     $("sessionId").value = "";
     resetChallengeView();
     resetStudentWorkspace();
@@ -359,7 +522,8 @@ function bindEventHandlers() {
     const filePath = $("filePath").value.trim();
     const repoErr = validateRepoUrl(repoUrl);
     if (repoErr) {
-      setLog($("createLog"), repoErr);
+      setLog($("createLog"), repoErr, "error");
+      $("repoUrl").focus();
       return;
     }
 
@@ -371,6 +535,8 @@ function bindEventHandlers() {
       file_paths: filePath ? [filePath] : []
     };
 
+    setButtonLoading($("btnCreate"), true, "Analyzing repository");
+    setLog($("createLog"), "Reading the repository and building your challenge…");
     try {
       const res = await fetch("/api/challenges/create", {
         method: "POST",
@@ -381,7 +547,7 @@ function bindEventHandlers() {
       const data = await parseApiResponse(res);
       if (!res.ok) throw new Error(data.detail || "create failed");
 
-      setLog($("createLog"), "请求完成");
+      setLog($("createLog"), "Challenge ready. Your workspace is set.", "success");
 
       $("sessionId").value = data.session_id;
       currentChallenge = data;
@@ -394,24 +560,27 @@ function bindEventHandlers() {
 
       $("completionCode").value = "";
       $("explanation").value = "";
+      showToast("Challenge ready. Start when you are.");
     } catch (e) {
       resetChallengeView();
       resetStudentWorkspace();
-      setLog($("createLog"), String(e));
+      setLog($("createLog"), String(e), "error");
+    } finally {
+      setButtonLoading($("btnCreate"), false, "");
     }
   };
 
   $("btnSubmit").onclick = async () => {
-    $("submitLog").textContent = "提交中...";
-    $("report").textContent = "";
+    $("submitLog").textContent = "";
+    resetReport();
 
     const sessionId = $("sessionId").value.trim();
     if (!sessionId) {
-      setLog($("submitLog"), "缺少 session_id");
+      setLog($("submitLog"), "Create a challenge first.", "error");
       return;
     }
     if (!currentChallenge || Object.keys(currentFiles).length === 0) {
-      setLog($("submitLog"), "请先生成挑战并加载挑战文件。");
+      setLog($("submitLog"), "Create a challenge and load its files first.", "error");
       return;
     }
 
@@ -421,7 +590,8 @@ function bindEventHandlers() {
       if (currentTaskType === "rewrite") {
         explanationMd = $("explanation").value;
         if (!explanationMd.trim()) {
-          setLog($("submitLog"), "rewrite 任务需要填写代码解释。");
+          setLog($("submitLog"), "Add your explanation before submitting.", "error");
+          $("explanation").focus();
           return;
         }
         filledFiles = cloneFiles(currentFiles);
@@ -429,11 +599,11 @@ function bindEventHandlers() {
         filledFiles = buildFilledFilesForBlankFill();
         explanationMd = "";
       } else {
-        setLog($("submitLog"), `未知任务类型: ${currentTaskType}`);
+        setLog($("submitLog"), `Unknown challenge type: ${currentTaskType}`, "error");
         return;
       }
     } catch (e) {
-      setLog($("submitLog"), String(e));
+      setLog($("submitLog"), String(e), "error");
       return;
     }
 
@@ -442,6 +612,8 @@ function bindEventHandlers() {
       filled_files: filledFiles
     };
 
+    setButtonLoading($("btnSubmit"), true, "Reviewing answer");
+    setLog($("submitLog"), "Evaluating your answer in context…");
     try {
       const res = await fetch(`/api/challenges/${sessionId}/submit`, {
         method: "POST",
@@ -452,19 +624,89 @@ function bindEventHandlers() {
       const data = await parseApiResponse(res);
       if (!res.ok) throw new Error(data.detail || "submit failed");
 
-      setLog($("submitLog"), "提交完成");
+      setLog($("submitLog"), "Review complete. Feedback is ready.", "success");
       renderReport(data.evaluation);
+      showToast("Feedback ready. See what to improve.");
+      $("evaluation").scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (e) {
-      setLog($("submitLog"), String(e));
+      setLog($("submitLog"), String(e), "error");
+    } finally {
+      setButtonLoading($("btnSubmit"), false, "");
     }
   };
+
+  $("copySession").onclick = async () => {
+    const value = $("sessionId").value.trim();
+    if (!value) {
+      showToast("Create a challenge before copying the session ID.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      showToast("Session ID copied.");
+    } catch (_) {
+      $("sessionId").select();
+      document.execCommand("copy");
+      showToast("Session ID copied.");
+    }
+  };
+
+  $("explanation").addEventListener("input", (event) => {
+    $("explanationCount").textContent = `${event.target.value.trim().length} chars`;
+    event.target.style.height = "auto";
+    event.target.style.height = `${Math.min(event.target.scrollHeight, 420)}px`;
+  });
+
+  $("completionCode").addEventListener("input", (event) => {
+    $("completionCount").textContent = `${countLines(event.target.value)} lines`;
+  });
+}
+
+function initPageMotion() {
+  const revealItems = document.querySelectorAll(".reveal");
+  if (!("IntersectionObserver" in window)) {
+    revealItems.forEach((item) => item.classList.add("visible"));
+    return;
+  }
+
+  const revealObserver = new IntersectionObserver((entries, observer) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("visible");
+      observer.unobserve(entry.target);
+    });
+  }, { threshold: 0.08, rootMargin: "0px 0px -30px" });
+  revealItems.forEach((item) => revealObserver.observe(item));
+
+  const sections = ["create", "workspace", "evaluation"]
+    .map((id) => $(id))
+    .filter(Boolean);
+  const navObserver = new IntersectionObserver((entries) => {
+    const visible = entries
+      .filter((entry) => entry.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (!visible) return;
+    document.querySelectorAll(".nav-item").forEach((item) => {
+      const isActive = item.dataset.section === visible.target.id;
+      item.classList.toggle("active", isActive);
+      if (isActive) {
+        item.setAttribute("aria-current", "page");
+      } else {
+        item.removeAttribute("aria-current");
+      }
+    });
+  }, { threshold: [0.2, 0.45, 0.7], rootMargin: "-90px 0px -45%" });
+  sections.forEach((section) => navObserver.observe(section));
 }
 
 function initApp() {
   if (!ensureRequiredElements()) return;
+  refreshIcons();
   bindEventHandlers();
   resetChallengeView();
   resetStudentWorkspace();
+  resetReport();
+  initPageMotion();
 }
 
 if (document.readyState === "loading") {

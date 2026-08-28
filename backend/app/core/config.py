@@ -5,9 +5,11 @@ class Settings(BaseSettings):
     # LLM
     OPENAI_API_KEY: str = "ollama"
     OPENAI_BASE_URL: str = "http://localhost:11434/v1"
-    OPENAI_MODEL: str = "llama3.1"
+    OPENAI_MODEL: str = "qwen2.5:7b"
+    LLM_HTTP_MAX_RETRIES: int = 2
+    LLM_HTTP_RETRY_BACKOFF_SECONDS: float = 1.0
     # Structured output retry cycles. 0 means retry until valid schema output.
-    LLM_STRUCTURED_MAX_RETRY_CYCLES: int = 0
+    LLM_STRUCTURED_MAX_RETRY_CYCLES: int = 3
 
     # GitHub MCP
     GITHUB_MCP_URL: str = "https://api.githubcopilot.com/mcp/"
