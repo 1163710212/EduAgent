@@ -23,9 +23,15 @@ cp .env.example backend/.env
 cd /data/choxia/EduAgent-main/backend
 source .venv-local/bin/activate
 uvicorn app.main:app --host 127.0.0.1 --port 8012 --reload
+#安装llm
+运行 /home/choxia/Data/EduAgent-main/ollama_install.ipynb
+ollama run llama3.1
+ollama run llama3.1:8b
 
-#绑定远程端口 （venus9替换为实际节点）
+#绑定远程端口 （mimas2替换为实际节点）
 ssh -J choxia@access.ihpc.uts.edu.au -L 8000:127.0.0.1:8012 choxia@mimas2
+#运行llm接口
+nohup python /home/choxia/Data/EduAgent-main/run_llama.py &
 
 #本地访问
 http://127.0.0.1:8000/
