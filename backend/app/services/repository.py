@@ -59,3 +59,15 @@ def create_submission(
         s.commit()
         s.refresh(row)
     return row
+
+
+def get_latest_submission(session_id: str) -> Optional[Submission]:
+    """Return the most recent review for a challenge session."""
+    with Session(engine) as s:
+        stmt = (
+            select(Submission)
+            .where(Submission.session_id == session_id)
+            .order_by(Submission.created_at.desc())
+            .limit(1)
+        )
+        return s.exec(stmt).first()

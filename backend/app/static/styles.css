@@ -128,7 +128,7 @@ i[class*=" ph-"] {
   margin: 16px auto 0;
   padding: 8px 10px 8px 12px;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr auto;
   align-items: center;
   gap: 18px;
   background: rgba(255, 255, 255, 0.86);
@@ -182,45 +182,6 @@ i[class*=" ph-"] {
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.pill-nav {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  background: #eff2f6;
-  border: 1px solid rgba(214, 222, 231, 0.65);
-  border-radius: 999px;
-}
-
-.nav-item {
-  min-height: 40px;
-  padding: 0 17px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  color: var(--muted);
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  transition: color 180ms ease, background-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
-}
-
-.nav-item i {
-  font-size: 16px;
-}
-
-.nav-item:hover {
-  color: var(--ink);
-  transform: translateY(-1px);
-}
-
-.nav-item.active {
-  color: var(--ink);
-  background: #fff;
-  box-shadow: 0 5px 16px rgba(16, 35, 55, 0.08);
 }
 
 .system-status {
@@ -647,7 +608,6 @@ i[class*=" ph-"] {
 }
 
 .button:focus-visible,
-.nav-item:focus-visible,
 .text-link:focus-visible,
 .back-top:focus-visible,
 .brand:focus-visible,
@@ -774,109 +734,6 @@ i[class*=" ph-"] {
   font-size: 14px;
 }
 
-.progress-panel {
-  position: relative;
-  padding: 0 48px 30px;
-}
-
-.progress-track {
-  position: absolute;
-  z-index: 0;
-  top: 18px;
-  left: calc(16.66% + 31px);
-  right: calc(16.66% + 31px);
-  height: 2px;
-  background: #e2e7ed;
-  overflow: hidden;
-}
-
-.progress-track span {
-  display: block;
-  width: 14%;
-  height: 100%;
-  background: var(--cobalt);
-  transition: width 500ms var(--ease);
-}
-
-.progress-steps {
-  position: relative;
-  z-index: 1;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  list-style: none;
-}
-
-.progress-steps li {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  color: var(--muted);
-  opacity: 0.64;
-  transition: color 180ms ease, opacity 180ms ease;
-}
-
-.progress-steps li:first-child {
-  justify-content: flex-start;
-}
-
-.progress-steps li:last-child {
-  justify-content: flex-end;
-}
-
-.progress-steps li.current,
-.progress-steps li.complete {
-  color: var(--ink);
-  opacity: 1;
-}
-
-.step-indicator {
-  width: 38px;
-  height: 38px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #68788a;
-  background: #fff;
-  border: 1px solid #ced7e1;
-  border-radius: 50%;
-  box-shadow: 0 0 0 6px #fff;
-}
-
-.step-indicator i {
-  font-size: 15px;
-}
-
-.current .step-indicator {
-  color: #fff;
-  background: var(--cobalt);
-  border-color: var(--cobalt);
-  box-shadow: 0 0 0 5px #fff, 0 0 0 7px rgba(21, 94, 239, 0.2);
-}
-
-.complete .step-indicator {
-  color: var(--green);
-  background: var(--green-soft);
-  border-color: rgba(23, 155, 112, 0.26);
-}
-
-.progress-steps li > div {
-  display: grid;
-  gap: 1px;
-}
-
-.progress-steps strong {
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.progress-steps small {
-  color: var(--faint);
-  font-size: 10px;
-}
-
 .workspace-content {
   border-top: 1px solid var(--line);
 }
@@ -904,6 +761,7 @@ i[class*=" ph-"] {
   margin-bottom: 25px;
 }
 
+.challenge-header h2,
 .challenge-header h3,
 .card-heading h2 {
   margin: 3px 0 0;
@@ -913,6 +771,7 @@ i[class*=" ph-"] {
   letter-spacing: -0.025em;
 }
 
+.challenge-header h2,
 .challenge-header h3 {
   font-size: 25px;
 }
@@ -967,6 +826,7 @@ i[class*=" ph-"] {
   color: var(--cobalt);
 }
 
+.block-title h3,
 .block-title h4 {
   margin: 0;
   color: var(--ink);
@@ -1558,6 +1418,68 @@ i[class*=" ph-"] {
   transform: translateY(0) scale(1);
 }
 
+.workflow-intro h1 {
+  margin: 7px 0 0;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: clamp(32px, 3.3vw, 46px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+}
+
+.page-shell {
+  min-height: calc(100vh - 210px);
+}
+
+.page-loading {
+  min-height: 300px;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.page-loading p {
+  margin: 0;
+}
+
+.spinner-dark {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--cobalt);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+.light-status {
+  color: var(--muted);
+  background: var(--surface-soft);
+  border-color: var(--line);
+}
+
+.light-status[data-status="success"] {
+  color: #106b4c;
+  background: var(--green-soft);
+  border-color: rgba(23, 155, 112, 0.2);
+}
+
+.light-status[data-status="error"] {
+  color: #9d2440;
+  background: #fff1f4;
+  border-color: rgba(197, 50, 83, 0.2);
+}
+
+.review-meta {
+  margin-left: auto;
+}
+
 .reveal {
   opacity: 1;
   transform: translateY(0);
@@ -1568,11 +1490,6 @@ i[class*=" ph-"] {
 .hero-stage.reveal {
   opacity: 1;
   transform: translateY(0);
-}
-
-@keyframes nav-enter {
-  from { opacity: 0; transform: translateY(-12px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes hero-enter {
@@ -1701,15 +1618,6 @@ i[class*=" ph-"] {
     display: none;
   }
 
-  .pill-nav {
-    justify-self: end;
-  }
-
-  .nav-item {
-    min-height: 36px;
-    padding: 0 12px;
-  }
-
   .app-shell {
     margin-top: 24px;
   }
@@ -1752,23 +1660,6 @@ i[class*=" ph-"] {
     gap: 10px;
   }
 
-  .progress-panel {
-    padding: 0 26px 28px;
-  }
-
-  .progress-track {
-    left: calc(16.66% + 15px);
-    right: calc(16.66% + 15px);
-  }
-
-  .progress-steps li {
-    justify-content: center !important;
-  }
-
-  .progress-steps li > div {
-    display: none;
-  }
-
   .challenge-view,
   .workspace-card {
     padding: 30px 26px;
@@ -1782,6 +1673,14 @@ i[class*=" ph-"] {
   .challenge-meta {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .workflow-intro h1 {
+    font-size: 34px;
+  }
+
+  .review-meta {
+    margin-left: 0;
   }
 
   .artifact-grid {
@@ -1829,12 +1728,6 @@ i[class*=" ph-"] {
     gap: 0;
   }
 
-  .nav-item {
-    width: 44px;
-    min-height: 44px;
-    padding: 0;
-  }
-
   .input-action {
     width: 36px;
     height: 36px;
@@ -1843,14 +1736,6 @@ i[class*=" ph-"] {
   .back-top {
     width: 44px;
     height: 44px;
-  }
-
-  .nav-item span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
   }
 
   .hero-stage {
@@ -1916,10 +1801,6 @@ i[class*=" ph-"] {
     font-size: 34px;
   }
 
-  .progress-panel {
-    padding: 0 20px 25px;
-  }
-
   .challenge-view,
   .workspace-card {
     padding: 26px 20px;
@@ -1982,6 +1863,7 @@ i[class*=" ph-"] {
     right: 14px;
     bottom: 14px;
   }
+
 }
 
 @media (prefers-reduced-motion: reduce) {

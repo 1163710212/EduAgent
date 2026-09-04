@@ -94,6 +94,12 @@ class SubmitResponse(BaseModel):
     evaluation: Dict[str, Any]
 
 
+class ReviewResponse(BaseModel):
+    session_id: str
+    task_type: Literal["rewrite", "blank_fill"]
+    evaluation: Dict[str, Any]
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # db
@@ -141,10 +147,24 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
+def _static_page(filename: str) -> HTMLResponse:
+    return HTMLResponse((STATIC_DIR / filename).read_text(encoding="utf-8"))
+
+
 @app.get("/", response_class=HTMLResponse)
-def ui():
-    with open(STATIC_DIR / "index.html", "r", encoding="utf-8") as f:
-        return f.read()
+@app.get("/create", response_class=HTMLResponse)
+def create_ui():
+    return _static_page("index.html")
+
+
+@app.get("/solve", response_class=HTMLResponse)
+def solve_ui():
+    return _static_page("solve.html")
+
+
+@app.get("/review", response_class=HTMLResponse)
+def review_ui():
+    return _static_page("review.html")
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -294,3 +314,25 @@ async def submit(session_id: str, req: SubmitRequest):
         raise HTTPException(status_code=500, detail=f"Failed to persist submission: {e}")
 
     return {"session_id": session_id, "evaluation": evaluation}
+
+
+@app.get("/api/challenges/{session_id}/review", response_model=ReviewResponse)
+def get_latest_review(session_id: str):
+    session = repository.get_challenge_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    submission = repository.get_latest_submission(session_id)
+    if not submission:
+        raise HTTPException(status_code=404, detail="No review found for this session")
+
+    challenge = json.loads(session.challenge_json)
+    task_type = challenge.get("task_type", "rewrite")
+    if task_type not in ("rewrite", "blank_fill"):
+        task_type = "rewrite"
+
+    return {
+        "session_id": session_id,
+        "task_type": task_type,
+        "evaluation": json.loads(submission.evaluation_json),
+    }

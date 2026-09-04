@@ -1,60 +1,34 @@
 <!doctype html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#f4f6f8" />
-  <meta name="description" content="EduAgent turns real GitHub repositories into focused coding challenges with AI feedback." />
-  <title>EduAgent · Learn from real code</title>
+  <meta name="description" content="Create a focused coding challenge from a real GitHub repository." />
+  <title>Create a challenge · EduAgent</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap"
-    rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
-
 <body>
   <a class="skip-link" href="#mainContent">Skip to content</a>
-
-  <header class="topbar" aria-label="Primary navigation">
-    <a class="brand" href="#top" aria-label="EduAgent home">
+  <header class="topbar single-path" aria-label="EduAgent">
+    <span class="brand" aria-label="EduAgent">
       <span class="brand-mark" aria-hidden="true"><i class="ph-duotone ph-book-open-text"></i></span>
-      <span class="brand-copy">
-        <span class="brand-name">EduAgent</span>
-        <small>Learning atelier</small>
-      </span>
-    </a>
-
-    <nav class="pill-nav" aria-label="Learning flow">
-      <a class="nav-item active" href="#create" data-section="create" aria-current="page">
-        <i class="ph ph-sparkle"></i><span>Create</span>
-      </a>
-      <a class="nav-item" href="#workspace" data-section="workspace">
-        <i class="ph ph-code"></i><span>Solve</span>
-      </a>
-      <a class="nav-item" href="#evaluation" data-section="evaluation">
-        <i class="ph ph-chart-bar"></i><span>Review</span>
-      </a>
-    </nav>
-
-    <div class="system-status" title="EduAgent status">
-      <span class="status-dot" aria-hidden="true"></span>
-      <span>AI ready</span>
-    </div>
+      <span class="brand-copy"><span class="brand-name">EduAgent</span><small>Learning atelier</small></span>
+    </span>
+    <div class="system-status" title="EduAgent status"><span class="status-dot" aria-hidden="true"></span><span>AI ready</span></div>
   </header>
 
   <main id="mainContent" class="app-shell">
-    <section id="top" class="hero-stage reveal" aria-labelledby="heroTitle">
-      <img class="hero-photo" src="/static/assets/pexels-adrien-olichon-glass-facade.jpg"
-        alt="Curved glass architecture under a clear blue sky" />
+    <section class="hero-stage reveal" aria-labelledby="heroTitle">
+      <img class="hero-photo" src="/static/assets/pexels-adrien-olichon-glass-facade.jpg" alt="Curved glass architecture under a clear blue sky" />
       <div class="hero-wash" aria-hidden="true"></div>
-
       <div class="hero-content">
-        <div class="eyebrow"><i class="ph-duotone ph-code-block"></i> Practice with real code</div>
+        <div class="eyebrow"><i class="ph-duotone ph-code-block"></i> Step 1 · Create</div>
         <h1 id="heroTitle">Connect a repo.<br /><span>Build understanding.</span></h1>
         <p class="hero-description">Turn any repository into a focused practice session.</p>
         <div class="hero-trust" aria-label="Product benefits">
@@ -64,262 +38,49 @@
         </div>
       </div>
 
-      <section id="create" class="create-composer" aria-labelledby="createTitle">
+      <section class="create-composer" aria-labelledby="createTitle">
         <div class="composer-heading">
           <div class="heading-lockup">
             <span class="heading-icon"><i class="ph-duotone ph-git-fork"></i></span>
-            <div>
-              <span class="step-label">Repository</span>
-              <h2 id="createTitle">Create a challenge</h2>
-            </div>
+            <div><span class="step-label">Repository</span><h2 id="createTitle">Create a challenge</h2></div>
           </div>
           <span class="live-badge"><span></span> Ready</span>
         </div>
-
-        <form class="challenge-form" onsubmit="return false;">
+        <form id="challengeForm" class="challenge-form">
           <div class="field field-wide">
             <label for="repoUrl">Repository URL</label>
-            <div class="input-shell">
-              <i class="ph ph-github-logo"></i>
-              <input id="repoUrl" inputmode="url" autocomplete="url"
-                placeholder="github.com/owner/repository" aria-describedby="repoHelp" />
-            </div>
+            <div class="input-shell"><i class="ph ph-github-logo"></i><input id="repoUrl" inputmode="url" autocomplete="url" placeholder="github.com/owner/repository" aria-describedby="repoHelp" /></div>
             <small id="repoHelp">Public or authorized private repositories</small>
           </div>
-
           <div class="field">
             <label for="ref">Branch</label>
-            <div class="input-shell">
-              <i class="ph ph-git-branch"></i>
-              <input id="ref" value="main" autocomplete="off" />
-            </div>
+            <div class="input-shell"><i class="ph ph-git-branch"></i><input id="ref" value="main" autocomplete="off" /></div>
           </div>
-
           <div class="field">
             <label for="language">Language</label>
-            <div class="input-shell select-shell">
-              <i class="ph ph-brackets-curly"></i>
-              <select id="language">
-                <option value="python" selected>Python</option>
-                <option value="javascript">JavaScript</option>
-                <option value="java">Java</option>
-                <option value="go">Go</option>
-              </select>
-              <i class="ph ph-caret-down select-chevron"></i>
-            </div>
+            <div class="input-shell select-shell"><i class="ph ph-brackets-curly"></i><select id="language"><option value="python" selected>Python</option><option value="javascript">JavaScript</option><option value="java">Java</option><option value="go">Go</option></select><i class="ph ph-caret-down select-chevron"></i></div>
           </div>
-
           <div class="field">
             <label for="taskType">Challenge type</label>
-            <div class="input-shell select-shell">
-              <i class="ph ph-crosshair"></i>
-              <select id="taskType">
-                <option value="rewrite" selected>Explain code</option>
-                <option value="blank_fill">Complete logic</option>
-              </select>
-              <i class="ph ph-caret-down select-chevron"></i>
-            </div>
+            <div class="input-shell select-shell"><i class="ph ph-crosshair"></i><select id="taskType"><option value="rewrite" selected>Explain code</option><option value="blank_fill">Complete logic</option></select><i class="ph ph-caret-down select-chevron"></i></div>
           </div>
-
           <div class="field">
             <label for="filePath">Target file <span>Optional</span></label>
-            <div class="input-shell">
-              <i class="ph ph-file-code"></i>
-              <input id="filePath" autocomplete="off" placeholder="src/main.py" />
-            </div>
+            <div class="input-shell"><i class="ph ph-file-code"></i><input id="filePath" autocomplete="off" placeholder="src/main.py" /></div>
           </div>
-
           <div class="form-footer field-wide">
             <p><i class="ph ph-lock-key"></i> Read-only access</p>
-            <button id="btnCreate" class="button button-accent" type="button">
-              <span>Generate challenge</span><i class="ph ph-arrow-right"></i>
-            </button>
+            <button id="btnCreate" class="button button-accent" type="submit"><span>Generate challenge</span><i class="ph ph-arrow-right"></i></button>
           </div>
         </form>
-
         <pre id="createLog" class="status-message" role="status" aria-live="polite"></pre>
       </section>
-
-      <a class="photo-credit" href="https://www.pexels.com/photo/facade-of-modern-glass-building-under-blue-sky-5230095/"
-        target="_blank" rel="noopener noreferrer">Photo · Adrien Olichon / Pexels</a>
+      <a class="photo-credit" href="https://www.pexels.com/photo/facade-of-modern-glass-building-under-blue-sky-5230095/" target="_blank" rel="noopener noreferrer">Photo · Adrien Olichon / Pexels</a>
     </section>
 
-    <section class="workflow-shell reveal" aria-labelledby="workspaceTitle">
-      <div class="workflow-intro">
-        <div>
-          <span class="section-kicker">Learning flow</span>
-          <h2 id="workspaceTitle">One focused session.</h2>
-        </div>
-        <p>Move from real code to clear understanding.</p>
-      </div>
-
-      <aside class="progress-panel" aria-label="Challenge progress">
-        <div class="progress-heading sr-only">
-          <span>Progress</span>
-          <strong id="progressLabel">Ready</strong>
-        </div>
-        <div class="progress-track" aria-hidden="true"><span id="progressBar"></span></div>
-        <ol class="progress-steps">
-          <li class="current" data-progress-step="create">
-            <span class="step-indicator"><i class="ph ph-plus"></i></span>
-            <div><strong>Create</strong><small>Connect a repository</small></div>
-          </li>
-          <li data-progress-step="workspace">
-            <span class="step-indicator"><i class="ph ph-code"></i></span>
-            <div><strong>Solve</strong><small>Explain or complete</small></div>
-          </li>
-          <li data-progress-step="evaluation">
-            <span class="step-indicator"><i class="ph ph-chart-bar"></i></span>
-            <div><strong>Review</strong><small>Learn from feedback</small></div>
-          </li>
-        </ol>
-      </aside>
-
-      <div class="workspace-content">
-        <section id="challengeView" class="challenge-view hidden" aria-labelledby="challengeTitle">
-          <div class="challenge-header">
-            <div>
-              <span class="section-kicker">Challenge ready</span>
-              <h3 id="challengeTitle">Challenge details</h3>
-            </div>
-            <div class="challenge-meta">
-              <span id="challengeTaskType" class="pill"></span>
-              <span id="challengeLanguage" class="pill"></span>
-              <span id="challengeSession" class="pill"></span>
-            </div>
-          </div>
-
-          <div class="artifact-grid">
-            <div class="artifact-block instructions-block">
-              <div class="block-title"><i class="ph-duotone ph-list-checks"></i><h4>Brief</h4></div>
-              <pre id="challengeInstructions" class="artifact-text"></pre>
-            </div>
-            <div class="artifact-block">
-              <div class="block-title"><i class="ph-duotone ph-folder-open"></i><h4>Files</h4></div>
-              <ul id="challengeFiles" class="file-list"></ul>
-            </div>
-          </div>
-        </section>
-
-        <section id="workspace" class="workspace-card reveal" aria-labelledby="answerTitle">
-          <div class="card-heading">
-            <div class="heading-icon"><i class="ph-duotone ph-code"></i></div>
-            <div>
-              <span class="step-label">Workspace</span>
-              <h2 id="answerTitle">Solve with context</h2>
-              <p>Read the source, then explain or complete the key logic.</p>
-            </div>
-            <div class="session-row">
-              <div class="field">
-                <label for="sessionId">Session ID</label>
-                <div class="input-shell">
-                  <i class="ph ph-fingerprint"></i>
-                  <input id="sessionId" placeholder="Created automatically" readonly />
-                  <button id="copySession" class="input-action" type="button" aria-label="Copy session ID"
-                    title="Copy session ID"><i class="ph ph-copy"></i></button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div id="workspaceEmpty" class="empty-state">
-            <span class="empty-icon"><i class="ph-duotone ph-browser"></i></span>
-            <h3>Your workspace is ready to begin.</h3>
-            <p>Create a challenge to load the source and response tools.</p>
-            <a href="#create" class="text-link">Create a challenge <i class="ph ph-arrow-up-right"></i></a>
-          </div>
-
-          <div id="answerWorkspace" class="answer-workspace hidden">
-            <div id="filesArea" class="files-area hidden">
-              <div class="editor-toolbar">
-                <div class="editor-label"><i class="ph ph-file-code"></i><span>Source</span></div>
-                <label class="sr-only" for="fileSelect">Challenge file</label>
-                <select id="fileSelect"></select>
-                <span class="readonly-badge"><i class="ph ph-lock"></i> Read only</span>
-              </div>
-              <textarea id="codeViewer" class="code readonly" spellcheck="false" readonly
-                aria-label="Challenge code"></textarea>
-            </div>
-
-            <div class="answer-column">
-              <div id="rewriteAnswerArea" class="answer-area hidden">
-                <div class="answer-heading">
-                  <div><span>Your response</span><h3>Explain the intent</h3></div>
-                  <span class="answer-mode"><i class="ph ph-chats-circle"></i> Explain</span>
-                </div>
-                <div class="composer-shell">
-                  <textarea id="explanation" class="explain" rows="8"
-                    aria-label="Code explanation"
-                    placeholder="Explain the semantics, control flow, and design intent…"></textarea>
-                  <div class="composer-footer">
-                    <span><i class="ph ph-info"></i> Make your reasoning clear</span>
-                    <span id="explanationCount">0 chars</span>
-                  </div>
-                </div>
-              </div>
-
-              <div id="blankFillAnswerArea" class="answer-area hidden">
-                <div class="answer-heading">
-                  <div><span>Your response</span><h3>Complete the logic</h3></div>
-                  <span class="answer-mode"><i class="ph ph-brackets-curly"></i> Complete</span>
-                </div>
-                <div class="composer-shell code-composer">
-                  <textarea id="completionCode" class="code-snippet" rows="9" spellcheck="false"
-                    aria-label="Code completion"
-                    placeholder="Enter the complete replacement for the BLANK region…"></textarea>
-                  <div class="composer-footer">
-                    <span><i class="ph ph-scan"></i> Preserve logic and indentation</span>
-                    <span id="completionCount">0 lines</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="submit-row">
-                <p><i class="ph-duotone ph-brain"></i> AI evaluates your answer in context.</p>
-                <button id="btnSubmit" class="button button-primary" type="button">
-                  <span>Get feedback</span><i class="ph ph-paper-plane-tilt"></i>
-                </button>
-              </div>
-              <pre id="submitLog" class="status-message" role="status" aria-live="polite"></pre>
-            </div>
-          </div>
-        </section>
-
-        <section id="evaluation" class="workspace-card evaluation-card reveal" aria-labelledby="evaluationTitle">
-          <div class="card-heading">
-            <div class="heading-icon"><i class="ph-duotone ph-chart-line-up"></i></div>
-            <div>
-              <span class="step-label">AI feedback</span>
-              <h2 id="evaluationTitle">Turn insight into progress</h2>
-              <p>Review the result and carry the lesson back to your project.</p>
-            </div>
-          </div>
-          <div id="report" class="report" aria-live="polite">
-            <div class="empty-state compact">
-              <span class="empty-icon"><i class="ph-duotone ph-chart-line"></i></span>
-              <h3>Feedback appears here.</h3>
-              <p>Submit your response to see a score, details, and next steps.</p>
-            </div>
-          </div>
-        </section>
-      </div>
-    </section>
   </main>
 
-  <footer class="site-footer">
-    <a class="brand footer-brand" href="#top">
-      <span class="brand-mark"><i class="ph-duotone ph-book-open-text"></i></span>
-      <span class="brand-name">EduAgent</span>
-    </a>
-    <p>Real code. Clear understanding.</p>
-    <a href="#top" class="back-top" aria-label="Back to top"><i class="ph ph-arrow-up"></i></a>
-  </footer>
-
-  <div id="toast" class="toast" role="status" aria-live="polite">
-    <i class="ph-duotone ph-check-circle"></i><span></span>
-  </div>
-
-  <script src="/static/app.js"></script>
+  <footer class="site-footer"><span class="brand footer-brand"><span class="brand-mark"><i class="ph-duotone ph-book-open-text"></i></span><span class="brand-name">EduAgent</span></span><p>Real code. Clear understanding.</p><a href="#mainContent" class="back-top" aria-label="Back to top"><i class="ph ph-arrow-up"></i></a></footer>
+  <script type="module" src="/static/js/pages/create.js"></script>
 </body>
-
 </html>
