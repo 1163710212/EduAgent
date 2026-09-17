@@ -1,50 +1,245 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f4f6f8" />
-  <meta name="description" content="Solve an EduAgent coding challenge with repository context." />
-  <title>Solve a challenge · EduAgent</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" /><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
-  <link rel="stylesheet" href="/static/styles.css" />
-</head>
-<body>
-  <a class="skip-link" href="#mainContent">Skip to content</a>
-  <header class="topbar single-path" aria-label="EduAgent">
-    <span class="brand" aria-label="EduAgent"><span class="brand-mark"><i class="ph-duotone ph-book-open-text"></i></span><span class="brand-copy"><span class="brand-name">EduAgent</span><small>Learning atelier</small></span></span>
-    <div class="system-status"><span class="status-dot"></span><span>AI ready</span></div>
-  </header>
-
-  <main id="mainContent" class="app-shell page-shell">
-    <section class="workflow-shell reveal" aria-labelledby="workspaceTitle">
-      <div class="workflow-intro"><div><span class="section-kicker">Step 2 · Solve</span><h1 id="workspaceTitle">Solve with context.</h1></div><p>Read the source, then explain or complete the key logic.</p></div>
-      <div id="workspaceLoading" class="page-loading"><span class="spinner-dark"></span><p>Loading challenge…</p></div>
-
-      <div id="workspaceContent" class="workspace-content hidden">
-        <section class="challenge-view" aria-labelledby="challengeTitle">
-          <div class="challenge-header"><div><span class="section-kicker">Challenge ready</span><h2 id="challengeTitle">Challenge details</h2></div><div class="challenge-meta"><span id="challengeTaskType" class="pill"></span><span id="challengeLanguage" class="pill"></span><span id="challengeSession" class="pill"></span></div></div>
-          <div class="artifact-grid"><div class="artifact-block instructions-block"><div class="block-title"><i class="ph-duotone ph-list-checks"></i><h3>Brief</h3></div><pre id="challengeInstructions" class="artifact-text"></pre></div><div class="artifact-block"><div class="block-title"><i class="ph-duotone ph-folder-open"></i><h3>Files</h3></div><ul id="challengeFiles" class="file-list"></ul></div></div>
-        </section>
-
-        <section class="workspace-card" aria-labelledby="answerTitle">
-          <div class="card-heading"><div class="heading-icon"><i class="ph-duotone ph-code"></i></div><div><span class="step-label">Workspace</span><h2 id="answerTitle">Your response</h2><p>Work from the repository context and submit when your reasoning is clear.</p></div><div class="session-row"><div class="field"><label for="sessionId">Session ID</label><div class="input-shell"><i class="ph ph-fingerprint"></i><input id="sessionId" readonly /><button id="copySession" class="input-action" type="button" aria-label="Copy session ID"><i class="ph ph-copy"></i></button></div></div></div></div>
-          <div class="answer-workspace">
-            <div id="filesArea" class="files-area"><div class="editor-toolbar"><div class="editor-label"><i class="ph ph-file-code"></i><span>Source</span></div><label class="sr-only" for="fileSelect">Challenge file</label><select id="fileSelect"></select><span class="readonly-badge"><i class="ph ph-lock"></i> Read only</span></div><textarea id="codeViewer" class="code readonly" spellcheck="false" readonly aria-label="Challenge code"></textarea></div>
-            <div class="answer-column">
-              <div id="rewriteAnswerArea" class="answer-area hidden"><div class="answer-heading"><div><span>Your response</span><h3>Explain the intent</h3></div><span class="answer-mode"><i class="ph ph-chats-circle"></i> Explain</span></div><div class="composer-shell"><textarea id="explanation" class="explain" rows="8" aria-label="Code explanation" placeholder="Explain the semantics, control flow, and design intent…"></textarea><div class="composer-footer"><span><i class="ph ph-info"></i> Make your reasoning clear</span><span id="explanationCount">0 chars</span></div></div></div>
-              <div id="blankFillAnswerArea" class="answer-area hidden"><div class="answer-heading"><div><span>Your response</span><h3>Complete the logic</h3></div><span class="answer-mode"><i class="ph ph-brackets-curly"></i> Complete</span></div><div class="composer-shell code-composer"><textarea id="completionCode" class="code-snippet" rows="9" spellcheck="false" aria-label="Code completion" placeholder="Enter the complete replacement for the BLANK region…"></textarea><div class="composer-footer"><span><i class="ph ph-scan"></i> Preserve logic and indentation</span><span id="completionCount">0 lines</span></div></div></div>
-              <div class="submit-row"><p><i class="ph-duotone ph-brain"></i> AI evaluates your answer in context.</p><button id="btnSubmit" class="button button-primary" type="button"><span>Get feedback</span><i class="ph ph-paper-plane-tilt"></i></button></div><pre id="submitLog" class="status-message light-status" role="status" aria-live="polite"></pre>
-            </div>
-          </div>
-        </section>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f6f8" />
+    <meta
+      name="description"
+      content="Solve an EduAgent coding challenge with repository context."
+    />
+    <title>Solve a challenge · EduAgent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="solve-page">
+    <a class="skip-link" href="#mainContent">Skip to content</a>
+    <header class="topbar single-path" aria-label="EduAgent" data-page-motion>
+      <span class="brand" aria-label="EduAgent"
+        ><span class="brand-mark"
+          ><i class="ph-duotone ph-book-open-text"></i></span
+        ><span class="brand-copy"
+          ><span class="brand-name">EduAgent</span
+          ><small>Learning atelier</small></span
+        ></span
+      >
+      <div class="system-status">
+        <span class="status-dot"></span><span>AI ready</span>
       </div>
-    </section>
-  </main>
-  <footer class="site-footer"><span class="brand footer-brand"><span class="brand-mark"><i class="ph-duotone ph-book-open-text"></i></span><span class="brand-name">EduAgent</span></span><p>Real code. Clear understanding.</p><a href="#mainContent" class="back-top" aria-label="Back to top"><i class="ph ph-arrow-up"></i></a></footer>
-  <div id="toast" class="toast" role="status" aria-live="polite"><i class="ph-duotone ph-check-circle"></i><span></span></div>
-  <script type="module" src="/static/js/pages/solve.js"></script>
-</body>
+    </header>
+
+    <main id="mainContent" class="app-shell page-shell">
+      <section class="workflow-shell" aria-labelledby="workspaceTitle">
+        <div class="workflow-intro" data-page-motion>
+          <div>
+            <span class="section-kicker">Step 2 · Solve</span>
+            <h1 id="workspaceTitle">Solve with context.</h1>
+          </div>
+          <p>Read the source, then explain or complete the key logic.</p>
+        </div>
+        <div id="workspaceLoading" class="page-loading">
+          <span class="spinner-dark"></span>
+          <p>Loading challenge…</p>
+        </div>
+
+        <div id="workspaceContent" class="workspace-content hidden">
+          <section
+            class="challenge-view"
+            aria-labelledby="challengeTitle"
+            data-motion
+          >
+            <div class="challenge-header">
+              <div>
+                <span class="section-kicker">Your challenge</span>
+                <h2 id="challengeTitle">Challenge details</h2>
+              </div>
+              <div class="challenge-meta">
+                <span id="challengeTaskType" class="pill"></span
+                ><span id="challengeLanguage" class="pill"></span
+                ><span id="challengeSession" class="pill hidden"></span>
+              </div>
+            </div>
+            <div class="artifact-grid">
+              <div class="artifact-block instructions-block">
+                <div class="block-title">
+                  <i class="ph-duotone ph-list-checks"></i>
+                  <h3>Brief</h3>
+                </div>
+                <pre id="challengeInstructions" class="artifact-text"></pre>
+              </div>
+              <div class="artifact-block">
+                <div class="block-title">
+                  <i class="ph-duotone ph-folder-open"></i>
+                  <h3>Files</h3>
+                </div>
+                <ul id="challengeFiles" class="file-list"></ul>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="workspace-card"
+            aria-labelledby="answerTitle"
+            data-motion
+          >
+            <div class="card-heading">
+              <div class="heading-icon"><i class="ph-duotone ph-code"></i></div>
+              <div>
+                <span class="step-label">Workspace</span>
+                <h2 id="answerTitle">Your response</h2>
+                <p>
+                  Work from the repository context and submit when your
+                  reasoning is clear.
+                </p>
+              </div>
+              <div class="session-row">
+                <div class="field">
+                  <label for="sessionId">Session ID</label>
+                  <div class="input-shell">
+                    <i class="ph ph-fingerprint"></i
+                    ><input id="sessionId" readonly /><button
+                      id="copySession"
+                      class="input-action"
+                      type="button"
+                      aria-label="Copy session ID"
+                    >
+                      <i class="ph ph-copy"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="answer-workspace">
+              <div id="filesArea" class="files-area">
+                <div class="editor-toolbar">
+                  <div class="editor-label">
+                    <i class="ph ph-file-code"></i><span>Source</span>
+                  </div>
+                  <label class="sr-only" for="fileSelect">Challenge file</label
+                  ><select id="fileSelect"></select
+                  ><span class="readonly-badge"
+                    ><i class="ph ph-lock"></i> Read only</span
+                  >
+                </div>
+                <textarea
+                  id="codeViewer"
+                  class="code readonly"
+                  spellcheck="false"
+                  readonly
+                  aria-label="Challenge code"
+                ></textarea>
+                <div class="editor-caption">
+                  <span id="sourceLineCount">0 lines</span
+                  ><span>Challenge source</span>
+                </div>
+              </div>
+              <div class="answer-column">
+                <div id="rewriteAnswerArea" class="answer-area hidden">
+                  <div class="answer-heading">
+                    <div>
+                      <span>Your response</span>
+                      <h3>Explain the intent</h3>
+                    </div>
+                    <span class="answer-mode"
+                      ><i class="ph ph-chats-circle"></i> Explain</span
+                    >
+                  </div>
+                  <div class="composer-shell">
+                    <textarea
+                      id="explanation"
+                      class="explain"
+                      rows="8"
+                      aria-label="Code explanation"
+                      placeholder="Explain the semantics, control flow, and design intent…"
+                    ></textarea>
+                    <div class="composer-footer">
+                      <span
+                        ><i class="ph ph-info"></i> Make your reasoning
+                        clear</span
+                      ><span id="explanationCount">0 chars</span>
+                    </div>
+                  </div>
+                </div>
+                <div id="blankFillAnswerArea" class="answer-area hidden">
+                  <div class="answer-heading">
+                    <div>
+                      <span>Your response</span>
+                      <h3>Complete the logic</h3>
+                    </div>
+                    <span class="answer-mode"
+                      ><i class="ph ph-brackets-curly"></i> Complete</span
+                    >
+                  </div>
+                  <div class="composer-shell code-composer">
+                    <textarea
+                      id="completionCode"
+                      class="code-snippet"
+                      rows="9"
+                      spellcheck="false"
+                      aria-label="Code completion"
+                      placeholder="Enter the complete replacement for the BLANK region…"
+                    ></textarea>
+                    <div class="composer-footer">
+                      <span
+                        ><i class="ph ph-scan"></i> Preserve logic and
+                        indentation</span
+                      ><span id="completionCount">0 lines</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="submit-row">
+                  <p>
+                    <i class="ph-duotone ph-brain"></i> AI evaluates your answer
+                    in context.
+                  </p>
+                  <button
+                    id="btnSubmit"
+                    class="button button-primary"
+                    type="button"
+                  >
+                    <span>Get feedback</span
+                    ><i class="ph ph-paper-plane-tilt"></i>
+                  </button>
+                </div>
+                <pre
+                  id="submitLog"
+                  class="status-message light-status"
+                  role="status"
+                  aria-live="polite"
+                ></pre>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <span class="brand footer-brand"
+        ><span class="brand-mark"
+          ><i class="ph-duotone ph-book-open-text"></i></span
+        ><span class="brand-name">EduAgent</span></span
+      >
+      <p>Real code. Clear understanding.</p>
+      <a href="#mainContent" class="back-top" aria-label="Back to top"
+        ><i class="ph ph-arrow-up"></i
+      ></a>
+    </footer>
+    <div id="toast" class="toast" role="status" aria-live="polite">
+      <i class="ph-duotone ph-check-circle"></i><span></span>
+    </div>
+    <script type="module" src="/static/js/pages/solve.js"></script>
+  </body>
 </html>

@@ -1,0 +1,13 @@
+{
+  "name": "eduagent-ui-checks",
+  "private": true,
+  "scripts": {
+    "check": "node check-ui.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright-core": "1.55.1"
+  }
+}

@@ -62,6 +62,15 @@ def test_workflow_pages_do_not_expose_cross_step_navigation():
         assert "location.assign" not in script
 
 
+def test_animation_assets_are_local_and_accessible():
+    response = TestClient(main.app).get("/static/vendor/motion-mini.mjs")
+    assert response.status_code == 200
+    motion = (STATIC_DIR / "js" / "ui" / "motion.js").read_text(encoding="utf-8")
+    assert "prefers-reduced-motion: reduce" in motion
+    assert 'import("../../vendor/motion-mini.mjs")' in motion
+    assert (STATIC_DIR / "vendor" / "LICENSE.txt").exists()
+
+
 def test_latest_review_can_restore_review_page(monkeypatch):
     challenge = {"task_type": "blank_fill"}
     evaluation = {"total_score": 92, "feedback_md": "Well done"}

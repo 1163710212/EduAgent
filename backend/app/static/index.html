@@ -1,86 +1,206 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#f4f6f8" />
-  <meta name="description" content="Create a focused coding challenge from a real GitHub repository." />
-  <title>Create a challenge · EduAgent</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
-  <link rel="stylesheet" href="/static/styles.css" />
-</head>
-<body>
-  <a class="skip-link" href="#mainContent">Skip to content</a>
-  <header class="topbar single-path" aria-label="EduAgent">
-    <span class="brand" aria-label="EduAgent">
-      <span class="brand-mark" aria-hidden="true"><i class="ph-duotone ph-book-open-text"></i></span>
-      <span class="brand-copy"><span class="brand-name">EduAgent</span><small>Learning atelier</small></span>
-    </span>
-    <div class="system-status" title="EduAgent status"><span class="status-dot" aria-hidden="true"></span><span>AI ready</span></div>
-  </header>
-
-  <main id="mainContent" class="app-shell">
-    <section class="hero-stage reveal" aria-labelledby="heroTitle">
-      <img class="hero-photo" src="/static/assets/pexels-adrien-olichon-glass-facade.jpg" alt="Curved glass architecture under a clear blue sky" />
-      <div class="hero-wash" aria-hidden="true"></div>
-      <div class="hero-content">
-        <div class="eyebrow"><i class="ph-duotone ph-code-block"></i> Step 1 · Create</div>
-        <h1 id="heroTitle">Connect a repo.<br /><span>Build understanding.</span></h1>
-        <p class="hero-description">Turn any repository into a focused practice session.</p>
-        <div class="hero-trust" aria-label="Product benefits">
-          <span><i class="ph-duotone ph-github-logo"></i><strong>Real repos</strong><small>Learn in context</small></span>
-          <span><i class="ph-duotone ph-target"></i><strong>Focused tasks</strong><small>Built by AI</small></span>
-          <span><i class="ph-duotone ph-chats-circle"></i><strong>Clear feedback</strong><small>Improve with intent</small></span>
-        </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f6f8" />
+    <meta
+      name="description"
+      content="Create a focused coding challenge from a real GitHub repository."
+    />
+    <title>Create a challenge · EduAgent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="create-page">
+    <a class="skip-link" href="#mainContent">Skip to content</a>
+    <header class="topbar single-path" aria-label="EduAgent" data-page-motion>
+      <span class="brand" aria-label="EduAgent">
+        <span class="brand-mark" aria-hidden="true"
+          ><i class="ph-duotone ph-book-open-text"></i
+        ></span>
+        <span class="brand-copy"
+          ><span class="brand-name">EduAgent</span
+          ><small>Learning atelier</small></span
+        >
+      </span>
+      <div class="system-status" title="EduAgent status">
+        <span class="status-dot" aria-hidden="true"></span><span>AI ready</span>
       </div>
+    </header>
 
-      <section class="create-composer" aria-labelledby="createTitle">
-        <div class="composer-heading">
-          <div class="heading-lockup">
-            <span class="heading-icon"><i class="ph-duotone ph-git-fork"></i></span>
-            <div><span class="step-label">Repository</span><h2 id="createTitle">Create a challenge</h2></div>
+    <main id="mainContent" class="app-shell">
+      <section class="hero-stage" aria-labelledby="heroTitle">
+        <img
+          class="hero-photo"
+          src="/static/assets/pexels-adrien-olichon-glass-facade.jpg"
+          alt="Curved glass architecture under a clear blue sky"
+        />
+        <div class="hero-wash" aria-hidden="true"></div>
+        <div class="hero-content">
+          <div class="eyebrow" data-page-motion>
+            <i class="ph-duotone ph-code-block"></i> Step 1 · Create
           </div>
-          <span class="live-badge"><span></span> Ready</span>
+          <h1 id="heroTitle" data-page-motion>
+            Connect a repo.<br /><span>Build understanding.</span>
+          </h1>
+          <p class="hero-description" data-page-motion>
+            Turn any repository into a focused practice session.
+          </p>
+          <div class="hero-trust" aria-label="Product benefits">
+            <span data-page-motion
+              ><i class="ph-duotone ph-github-logo"></i
+              ><strong>Real repos</strong><small>Learn in context</small></span
+            >
+            <span data-page-motion
+              ><i class="ph-duotone ph-target"></i><strong>Focused tasks</strong
+              ><small>Built by AI</small></span
+            >
+            <span data-page-motion
+              ><i class="ph-duotone ph-chats-circle"></i
+              ><strong>Clear feedback</strong
+              ><small>Improve with intent</small></span
+            >
+          </div>
         </div>
-        <form id="challengeForm" class="challenge-form">
-          <div class="field field-wide">
-            <label for="repoUrl">Repository URL</label>
-            <div class="input-shell"><i class="ph ph-github-logo"></i><input id="repoUrl" inputmode="url" autocomplete="url" placeholder="github.com/owner/repository" aria-describedby="repoHelp" /></div>
-            <small id="repoHelp">Public or authorized private repositories</small>
+
+        <section
+          class="create-composer"
+          aria-labelledby="createTitle"
+          data-page-motion
+        >
+          <div class="composer-heading">
+            <div class="heading-lockup">
+              <span class="heading-icon"
+                ><i class="ph-duotone ph-git-fork"></i
+              ></span>
+              <div>
+                <span class="step-label">Repository</span>
+                <h2 id="createTitle">Create a challenge</h2>
+              </div>
+            </div>
+            <span class="live-badge"><span></span> Ready</span>
           </div>
-          <div class="field">
-            <label for="ref">Branch</label>
-            <div class="input-shell"><i class="ph ph-git-branch"></i><input id="ref" value="main" autocomplete="off" /></div>
-          </div>
-          <div class="field">
-            <label for="language">Language</label>
-            <div class="input-shell select-shell"><i class="ph ph-brackets-curly"></i><select id="language"><option value="python" selected>Python</option><option value="javascript">JavaScript</option><option value="java">Java</option><option value="go">Go</option></select><i class="ph ph-caret-down select-chevron"></i></div>
-          </div>
-          <div class="field">
-            <label for="taskType">Challenge type</label>
-            <div class="input-shell select-shell"><i class="ph ph-crosshair"></i><select id="taskType"><option value="rewrite" selected>Explain code</option><option value="blank_fill">Complete logic</option></select><i class="ph ph-caret-down select-chevron"></i></div>
-          </div>
-          <div class="field">
-            <label for="filePath">Target file <span>Optional</span></label>
-            <div class="input-shell"><i class="ph ph-file-code"></i><input id="filePath" autocomplete="off" placeholder="src/main.py" /></div>
-          </div>
-          <div class="form-footer field-wide">
-            <p><i class="ph ph-lock-key"></i> Read-only access</p>
-            <button id="btnCreate" class="button button-accent" type="submit"><span>Generate challenge</span><i class="ph ph-arrow-right"></i></button>
-          </div>
-        </form>
-        <pre id="createLog" class="status-message" role="status" aria-live="polite"></pre>
+          <p class="composer-description">
+            Choose your source. Make the practice your own.
+          </p>
+          <form id="challengeForm" class="challenge-form">
+            <div class="form-group">
+              <div class="form-group-heading">
+                <span>01</span>
+                <h3>Repository context</h3>
+              </div>
+              <div class="field field-wide">
+                <label for="repoUrl">Repository URL</label>
+                <div class="input-shell">
+                  <i class="ph ph-github-logo"></i
+                  ><input
+                    id="repoUrl"
+                    inputmode="url"
+                    autocomplete="url"
+                    placeholder="github.com/owner/repository"
+                    aria-describedby="repoHelp"
+                  />
+                </div>
+                <small id="repoHelp"
+                  >Public or authorized private repositories</small
+                >
+              </div>
+              <div class="field">
+                <label for="ref">Branch</label>
+                <div class="input-shell">
+                  <i class="ph ph-git-branch"></i
+                  ><input id="ref" value="main" autocomplete="off" />
+                </div>
+              </div>
+              <div class="field">
+                <label for="language">Language</label>
+                <div class="input-shell select-shell">
+                  <i class="ph ph-brackets-curly"></i
+                  ><select id="language">
+                    <option value="python" selected>Python</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="java">Java</option>
+                    <option value="go">Go</option></select
+                  ><i class="ph ph-caret-down select-chevron"></i>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="form-group-heading">
+                <span>02</span>
+                <h3>Practice focus</h3>
+              </div>
+              <div class="field">
+                <label for="taskType">Challenge type</label>
+                <div class="input-shell select-shell">
+                  <i class="ph ph-crosshair"></i
+                  ><select id="taskType">
+                    <option value="rewrite" selected>Explain code</option>
+                    <option value="blank_fill">Complete logic</option></select
+                  ><i class="ph ph-caret-down select-chevron"></i>
+                </div>
+              </div>
+              <div class="field">
+                <label for="filePath">Target file <span>Optional</span></label>
+                <div class="input-shell">
+                  <i class="ph ph-file-code"></i
+                  ><input
+                    id="filePath"
+                    autocomplete="off"
+                    placeholder="src/main.py"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="form-footer field-wide">
+              <p><i class="ph ph-lock-key"></i> Read-only access</p>
+              <button id="btnCreate" class="button button-accent" type="submit">
+                <span>Generate challenge</span><i class="ph ph-arrow-right"></i>
+              </button>
+            </div>
+          </form>
+          <pre
+            id="createLog"
+            class="status-message"
+            role="status"
+            aria-live="polite"
+          ></pre>
+        </section>
+        <a
+          class="photo-credit"
+          href="https://www.pexels.com/photo/facade-of-modern-glass-building-under-blue-sky-5230095/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Photo · Adrien Olichon / Pexels</a
+        >
       </section>
-      <a class="photo-credit" href="https://www.pexels.com/photo/facade-of-modern-glass-building-under-blue-sky-5230095/" target="_blank" rel="noopener noreferrer">Photo · Adrien Olichon / Pexels</a>
-    </section>
+    </main>
 
-  </main>
-
-  <footer class="site-footer"><span class="brand footer-brand"><span class="brand-mark"><i class="ph-duotone ph-book-open-text"></i></span><span class="brand-name">EduAgent</span></span><p>Real code. Clear understanding.</p><a href="#mainContent" class="back-top" aria-label="Back to top"><i class="ph ph-arrow-up"></i></a></footer>
-  <script type="module" src="/static/js/pages/create.js"></script>
-</body>
+    <footer class="site-footer">
+      <span class="brand footer-brand"
+        ><span class="brand-mark"
+          ><i class="ph-duotone ph-book-open-text"></i></span
+        ><span class="brand-name">EduAgent</span></span
+      >
+      <p>Real code. Clear understanding.</p>
+      <a href="#mainContent" class="back-top" aria-label="Back to top"
+        ><i class="ph ph-arrow-up"></i
+      ></a>
+    </footer>
+    <script type="module" src="/static/js/pages/create.js"></script>
+  </body>
 </html>
