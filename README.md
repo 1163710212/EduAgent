@@ -29,7 +29,7 @@ ollama run llama3.1
 ollama run llama3.1:8b
 
 #绑定远程端口 （mimas2替换为实际节点）
-ssh -J choxia@access.ihpc.uts.edu.au -L 8000:127.0.0.1:8012 choxia@mimas2
+ssh -J choxia@access.ihpc.uts.edu.au -L 8000:127.0.0.1:8012 choxia@mimas1
 #运行llm接口
 nohup python /home/choxia/Data/EduAgent-main/run_llama.py &
 

@@ -36,18 +36,19 @@ export async function revealElements(elements, options = {}) {
     stagger = 0.065,
     delay = 0,
     distance = 18,
+    keyframes = {
+      opacity: [0, 1],
+      transform: [`translateY(${distance}px)`, "translateY(0px)"],
+    },
   } = options;
   targets.forEach((element, index) => {
     if (!element.isConnected) return;
     try {
-      const animation = animate(
-        element,
-        {
-          opacity: [0, 1],
-          transform: [`translateY(${distance}px)`, "translateY(0px)"],
-        },
-        { duration, delay: delay + index * stagger, ease: [0.22, 1, 0.36, 1] },
-      );
+      const animation = animate(element, keyframes, {
+        duration,
+        delay: delay + index * stagger,
+        ease: [0.22, 1, 0.36, 1],
+      });
       activeAnimations.add(animation);
       animation.then(() => activeAnimations.delete(animation));
     } catch (_) {
@@ -78,5 +79,24 @@ export function initPageMotion() {
   initialized = true;
   revealElements(document.querySelectorAll("[data-page-motion]"), {
     stagger: 0.075,
+  });
+  revealElements(document.querySelectorAll("[data-title-motion]"), {
+    duration: 0.95,
+    stagger: 0.12,
+    delay: 0.12,
+    keyframes: {
+      opacity: [0, 1],
+      transform: ["translateY(105%)", "translateY(0)"],
+    },
+  });
+  revealElements(document.querySelectorAll("[data-learning-book]"), {
+    duration: 0.85,
+    delay: 0.18,
+    keyframes: {
+      transform: [
+        "perspective(180px) rotateY(-38deg)",
+        "perspective(180px) rotateY(0deg)",
+      ],
+    },
   });
 }

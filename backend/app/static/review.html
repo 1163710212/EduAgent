@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f4f6f8" />
+    <meta name="theme-color" content="#071722" />
     <meta
       name="description"
       content="Review AI feedback for an EduAgent coding challenge."
@@ -23,31 +23,58 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css"
     />
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260922-clear-video" />
+    <link rel="stylesheet" href="/static/optical-background.css?v=20260922-clear-video" />
+    <link rel="stylesheet" href="/static/workflow-theme.css?v=20260922-clear-video" />
   </head>
   <body class="review-page">
+    <div
+      id="ambientBackground"
+      class="ambient-background review-video-background"
+      aria-hidden="true"
+      data-renderer="loading"
+      data-state="loading"
+    >
+      <video
+        id="reviewBackgroundVideo"
+        class="review-background-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        tabindex="-1"
+      >
+        <source
+          src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260622_204221_5339e40b-e73d-4ab0-9c65-79c18c66fd50.mp4"
+          type="video/mp4"
+        />
+      </video>
+    </div>
     <a class="skip-link" href="#mainContent">Skip to content</a>
     <header class="topbar single-path" aria-label="EduAgent" data-page-motion>
       <span class="brand" aria-label="EduAgent"
         ><span class="brand-mark"
-          ><i class="ph-duotone ph-book-open-text"></i></span
+          ><i class="ph-duotone ph-book-open-text" data-learning-book></i></span
         ><span class="brand-copy"
           ><span class="brand-name">EduAgent</span
           ><small>Learning atelier</small></span
         ></span
       >
-      <div class="system-status">
-        <span class="status-dot"></span><span>AI ready</span>
-      </div>
     </header>
     <main id="mainContent" class="app-shell page-shell">
       <section class="workflow-shell" aria-labelledby="reviewTitle">
         <div class="workflow-intro" data-page-motion>
-          <div>
+          <div class="workflow-intro-copy">
             <span class="section-kicker">Step 3 · Review</span>
-            <h1 id="reviewTitle">Turn insight into progress.</h1>
+            <h1 id="reviewTitle">
+              <span class="title-line"
+                ><span data-title-motion
+                  >Turn insight into progress.</span
+                ></span
+              >
+            </h1>
           </div>
-          <p>Review the result and carry the lesson back to your project.</p>
         </div>
         <div id="reviewLoading" class="page-loading">
           <span class="spinner-dark"></span>
@@ -57,6 +84,7 @@
           <section
             class="workspace-card evaluation-card"
             aria-labelledby="evaluationTitle"
+            data-pointer-glow
           >
             <div class="card-heading">
               <div class="heading-icon">
@@ -65,10 +93,6 @@
               <div>
                 <span class="step-label">AI feedback</span>
                 <h2 id="evaluationTitle">Your challenge review</h2>
-                <p>
-                  Use the feedback and next steps to strengthen your
-                  understanding.
-                </p>
               </div>
               <div class="challenge-meta review-meta">
                 <span id="reviewSession" class="pill"></span>
@@ -85,11 +109,13 @@
           ><i class="ph-duotone ph-book-open-text"></i></span
         ><span class="brand-name">EduAgent</span></span
       >
-      <p>Real code. Clear understanding.</p>
       <a href="#mainContent" class="back-top" aria-label="Back to top"
         ><i class="ph ph-arrow-up"></i
       ></a>
     </footer>
     <script type="module" src="/static/js/pages/review.js"></script>
+    <script type="module" src="/static/js/ui/review-video-background.js"></script>
+    <script type="module" src="/static/js/ui/scene-transition.js"></script>
+    <script type="module" src="/static/js/ui/pointer-glow.js"></script>
   </body>
 </html>

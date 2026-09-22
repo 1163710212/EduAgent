@@ -42,13 +42,59 @@ export function setButtonLoading(button, isLoading, loadingLabel = "") {
   if (isLoading && !spinner) {
     icon?.classList.add("hidden");
     const nextSpinner = document.createElement("span");
-    nextSpinner.className = "spinner";
+    nextSpinner.className = "spinner learning-loader";
     nextSpinner.setAttribute("aria-hidden", "true");
     button.appendChild(nextSpinner);
   } else if (!isLoading && spinner) {
     spinner.remove();
     icon?.classList.remove("hidden");
   }
+  document.dispatchEvent(
+    new CustomEvent("eduagent:button-loading", {
+      detail: { buttonId: button.id, loading: isLoading },
+    }),
+  );
+}
+
+// Optional visual handoff cannot prevent successful business navigation.
+export async function navigateForward(url) {
+  let deadline;
+  try {
+    const target = new URL(url, location.href);
+    if (
+      target.origin === location.origin &&
+      location.pathname === "/solve" &&
+      target.pathname === "/review"
+    ) {
+      // Separate, optional visual marker: never part of the workflow/API payload.
+      sessionStorage.setItem(
+        "eduagent.review-reveal.v1",
+        JSON.stringify({
+          sessionId: target.searchParams.get("session_id"),
+          createdAt: Date.now(),
+        }),
+      );
+    }
+  } catch (_) {
+    /* Blocked storage cannot prevent successful navigation. */
+  }
+  try {
+    const scene = await Promise.race([
+      import("./scene-transition.js"),
+      new Promise((resolve) => {
+        deadline = window.setTimeout(() => resolve(null), 120);
+      }),
+    ]);
+    if (scene) {
+      await scene.transitionToNextStep(url);
+      return;
+    }
+  } catch (_) {
+    // Missing scripts, unsupported animation APIs and storage restrictions are safe.
+  } finally {
+    window.clearTimeout(deadline);
+  }
+  window.location.replace(url);
 }
 
 export function showToast(message) {

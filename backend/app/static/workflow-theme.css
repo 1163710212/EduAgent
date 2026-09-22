@@ -1,0 +1,447 @@
+/*
+ * EduAgent cinematic workflow theme
+ * Shared presentation only: Create, Solve and Review keep independent behavior.
+ */
+.create-page,
+.solve-page,
+.review-page {
+  --scene-night: #071722;
+  --scene-deep: rgba(7, 24, 37, 0.9);
+  --scene-deep-soft: rgba(8, 29, 44, 0.78);
+  --scene-line: rgba(190, 229, 238, 0.2);
+  --scene-line-strong: rgba(202, 238, 245, 0.32);
+  --scene-text: #f5fafb;
+  --scene-muted: rgba(218, 235, 239, 0.72);
+  --scene-cyan: #79dce8;
+  --scene-blue: #7199ff;
+  --scene-ice: rgba(246, 251, 252, 0.94);
+  --scene-ice-soft: rgba(231, 242, 246, 0.9);
+  --scene-shell-shadow:
+    0 28px 80px rgba(0, 10, 18, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  --scene-card-shadow:
+    0 18px 44px rgba(0, 12, 22, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.44);
+}
+
+/* One quiet, transparent brand rail on every step. */
+.create-page .topbar::after,
+.solve-page .topbar::after,
+.review-page .topbar::after {
+  background: linear-gradient(
+    90deg,
+    rgba(182, 226, 236, 0.34),
+    rgba(129, 178, 207, 0.12) 52%,
+    transparent 88%
+  );
+}
+.create-page .topbar .brand-name,
+.solve-page .topbar .brand-name,
+.review-page .topbar .brand-name,
+.create-page .footer-brand .brand-name,
+.solve-page .footer-brand .brand-name,
+.review-page .footer-brand .brand-name {
+  color: var(--scene-text);
+  text-shadow: 0 2px 22px rgba(0, 7, 13, 0.42);
+}
+.create-page .brand-copy small,
+.solve-page .brand-copy small,
+.review-page .brand-copy small {
+  color: var(--scene-muted);
+}
+.create-page .brand-mark,
+.solve-page .brand-mark,
+.review-page .brand-mark {
+  color: #eafcff;
+  background: rgba(6, 24, 37, 0.84);
+  border: 1px solid var(--scene-line);
+  box-shadow:
+    0 14px 34px rgba(0, 8, 15, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(16px) saturate(125%);
+  backdrop-filter: blur(16px) saturate(125%);
+}
+
+/* Shared step language and editorial title hierarchy. */
+.create-page .eyebrow,
+.solve-page .section-kicker,
+.review-page .section-kicker {
+  width: fit-content;
+  min-height: 32px;
+  padding: 7px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #a7edf4;
+  background: rgba(6, 25, 39, 0.64);
+  border: 1px solid rgba(182, 231, 240, 0.22);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  text-shadow: 0 0 20px rgba(82, 211, 229, 0.18);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  backdrop-filter: blur(14px) saturate(120%);
+}
+.create-page .hero-stage h1,
+.solve-page .workflow-intro h1,
+.review-page .workflow-intro h1 {
+  color: var(--scene-text);
+  text-shadow: 0 4px 28px rgba(0, 6, 12, 0.36);
+}
+.create-page .hero-stage h1 .title-line {
+  color: var(--scene-text);
+}
+.create-page .hero-stage h1 .title-line-accent {
+  color: rgba(205, 228, 236, 0.86);
+}
+
+/* Create: same glass language, with the video still fully legible. */
+.create-page .hero-stage {
+  background:
+    linear-gradient(120deg, rgba(5, 20, 32, 0.34), rgba(5, 19, 30, 0.12) 60%),
+    rgba(5, 18, 29, 0.08);
+  border-color: var(--scene-line-strong);
+  box-shadow: var(--scene-shell-shadow);
+}
+.create-page .hero-trust > span {
+  color: var(--scene-text);
+  background: rgba(7, 27, 41, 0.58);
+  border-color: var(--scene-line);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(16px) saturate(120%);
+  backdrop-filter: blur(16px) saturate(120%);
+}
+.create-page .hero-trust i {
+  color: var(--scene-cyan);
+}
+.create-page .hero-trust strong {
+  color: var(--scene-text);
+}
+.create-page .hero-trust small {
+  color: var(--scene-muted);
+}
+
+/* Shared primary glass shells. */
+.create-page .create-composer,
+.solve-page .challenge-view,
+.solve-page .workspace-card,
+.review-page .evaluation-card {
+  background:
+    radial-gradient(circle at 86% 0%, rgba(91, 203, 222, 0.12), transparent 34%),
+    linear-gradient(145deg, var(--scene-deep), var(--scene-deep-soft));
+  border: 1px solid var(--scene-line);
+  border-radius: 28px;
+  box-shadow: var(--scene-shell-shadow);
+  -webkit-backdrop-filter: blur(24px) saturate(124%);
+  backdrop-filter: blur(24px) saturate(124%);
+}
+.create-page .create-composer,
+.solve-page .workspace-card {
+  padding: clamp(24px, 2.25vw, 34px);
+}
+.create-page .heading-icon,
+.solve-page .heading-icon,
+.review-page .heading-icon {
+  color: #a8edf6;
+  background: linear-gradient(
+    145deg,
+    rgba(105, 214, 230, 0.18),
+    rgba(110, 148, 240, 0.14)
+  );
+  border: 1px solid rgba(178, 231, 241, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.create-page .composer-heading h2,
+.solve-page .card-heading h2,
+.review-page .card-heading h2 {
+  color: var(--scene-text);
+}
+.create-page .step-label,
+.solve-page .step-label,
+.review-page .step-label {
+  color: #8fe4ef;
+}
+
+/* Unified dark form controls and focus treatment. */
+.create-page .form-group + .form-group,
+.solve-page .workspace-card > .card-heading,
+.review-page .evaluation-card > .card-heading {
+  border-color: rgba(187, 228, 237, 0.14);
+}
+.create-page .form-group-heading > span {
+  color: #83c9d8;
+}
+.create-page .form-group-heading h3,
+.create-page .field label,
+.solve-page .session-row .field label {
+  color: rgba(232, 243, 246, 0.88);
+}
+.create-page .field label span,
+.create-page .field > small,
+.create-page .form-footer p,
+.solve-page .session-row .field label {
+  color: var(--scene-muted);
+}
+.create-page .input-shell,
+.solve-page .session-row .input-shell {
+  background: rgba(17, 47, 66, 0.76);
+  border-color: rgba(175, 218, 229, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+.create-page .input-shell input,
+.create-page .input-shell select,
+.solve-page .session-row input {
+  color: #f1f7f9;
+}
+.create-page .input-shell > i:first-child,
+.create-page .select-chevron,
+.solve-page .session-row .input-shell > i:first-child,
+.solve-page .input-action {
+  color: #a3c5d1;
+}
+.create-page .input-shell:focus-within,
+.solve-page .session-row .input-shell:focus-within {
+  background: rgba(20, 56, 77, 0.9);
+  border-color: var(--scene-cyan);
+  box-shadow:
+    0 0 0 3px rgba(91, 207, 225, 0.12),
+    0 10px 28px rgba(0, 12, 22, 0.14);
+}
+.create-page input::placeholder {
+  color: rgba(190, 211, 219, 0.58);
+}
+.create-page select option {
+  color: #eef7f9;
+  background: #102b3e;
+}
+.create-page .live-badge {
+  color: #a9eed1;
+  background: rgba(64, 170, 126, 0.13);
+  border-color: rgba(105, 210, 166, 0.22);
+}
+
+/* One button treatment carries the learner forward through the workflow. */
+.create-page .button-accent,
+.solve-page .button-primary {
+  color: #fff;
+  background: linear-gradient(110deg, #3d6ff3, #3278ec 58%, #268ca7);
+  border: 1px solid rgba(183, 219, 255, 0.16);
+  box-shadow:
+    0 12px 28px rgba(19, 65, 173, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.create-page .button-accent:hover,
+.solve-page .button-primary:hover {
+  background: linear-gradient(110deg, #497bf6, #3a83f1 58%, #2a9ab5);
+  box-shadow:
+    0 16px 34px rgba(17, 67, 174, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+/* Solve: dark context shell plus one calm, ice-white writing plane. */
+.solve-page .challenge-header h2,
+.solve-page .block-title h3,
+.solve-page .answer-heading h3 {
+  color: var(--scene-text);
+}
+.solve-page .challenge-meta .pill,
+.solve-page .readonly-badge {
+  color: #b9dbe2;
+  background: rgba(119, 199, 216, 0.09);
+  border-color: rgba(149, 219, 232, 0.16);
+}
+.solve-page .artifact-block + .artifact-block {
+  border-color: rgba(184, 226, 235, 0.15);
+}
+.solve-page .block-title {
+  color: var(--scene-cyan);
+}
+.solve-page .artifact-text {
+  color: rgba(220, 235, 239, 0.76);
+}
+.solve-page .file-item {
+  background: rgba(224, 244, 248, 0.08);
+  border-color: rgba(177, 224, 234, 0.16);
+}
+.solve-page .file-item code {
+  color: #ecf6f8;
+}
+.solve-page .file-stats {
+  color: var(--scene-muted);
+}
+.solve-page .ghost-btn {
+  color: #c5eff5;
+  background: rgba(94, 187, 211, 0.13);
+  border-color: rgba(139, 215, 231, 0.2);
+}
+.solve-page .ghost-btn:hover {
+  color: #fff;
+  background: rgba(94, 187, 211, 0.22);
+}
+.solve-page .workspace-card > .card-heading {
+  margin-bottom: 24px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(187, 228, 237, 0.14);
+}
+.solve-page .files-area {
+  background: rgba(10, 36, 53, 0.94);
+  border-color: rgba(151, 207, 221, 0.2);
+  border-radius: 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+.solve-page .editor-toolbar,
+.solve-page .editor-caption {
+  background: rgba(23, 57, 76, 0.9);
+  border-color: rgba(158, 209, 222, 0.17);
+}
+.solve-page .editor-toolbar select {
+  background: rgba(40, 78, 99, 0.82);
+  border-color: rgba(172, 216, 227, 0.22);
+}
+.solve-page .composer-shell {
+  background: linear-gradient(145deg, var(--scene-ice), var(--scene-ice-soft));
+  border-color: rgba(209, 232, 237, 0.72);
+  border-radius: 16px;
+  box-shadow: var(--scene-card-shadow);
+}
+.solve-page .composer-shell:focus-within {
+  border-color: #7da5ff;
+  box-shadow:
+    0 0 0 3px rgba(84, 135, 246, 0.11),
+    0 20px 46px rgba(0, 14, 24, 0.18);
+}
+.solve-page .composer-shell::before {
+  background: linear-gradient(90deg, var(--scene-blue), var(--scene-cyan));
+}
+.solve-page .light-status {
+  color: var(--scene-muted);
+  background: rgba(15, 43, 60, 0.86);
+  border-color: var(--scene-line);
+}
+
+/* Review: same shell and ice surfaces, with the score kept as the visual anchor. */
+.review-page .evaluation-card {
+  padding: clamp(24px, 2.25vw, 34px);
+}
+.review-page .evaluation-card > .card-heading {
+  margin-bottom: 22px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(187, 228, 237, 0.14);
+}
+.review-page .review-meta .pill {
+  color: #c4e8ee;
+  background: rgba(113, 199, 217, 0.09);
+  border-color: rgba(152, 219, 232, 0.18);
+}
+.review-page .score-card,
+.review-page .feedback-card,
+.review-page .suggestions-card {
+  border-radius: 16px;
+}
+.review-page .score-card {
+  background:
+    radial-gradient(circle at 76% 14%, rgba(80, 206, 226, 0.18), transparent 34%),
+    linear-gradient(150deg, rgba(9, 43, 61, 0.98), rgba(5, 26, 41, 0.98));
+  border-color: rgba(132, 215, 230, 0.24);
+  box-shadow:
+    0 22px 48px rgba(1, 15, 25, 0.28),
+    inset 0 1px 0 rgba(207, 246, 252, 0.12);
+}
+.review-page .feedback-card,
+.review-page .suggestions-card {
+  background: linear-gradient(145deg, var(--scene-ice), var(--scene-ice-soft));
+  border-color: rgba(210, 233, 238, 0.74);
+  box-shadow: var(--scene-card-shadow);
+}
+.review-page .feedback-card h3,
+.review-page .suggestions-card h3 {
+  color: #102c3e;
+}
+.review-page .feedback-card h3 i,
+.review-page .suggestions-card h3 i {
+  color: #1685a0;
+}
+.review-page .feedback-content,
+.review-page .suggestion-list li {
+  color: #385b6e;
+}
+.review-page .suggestion-list li {
+  background: rgba(255, 255, 255, 0.58);
+  border-color: rgba(87, 151, 167, 0.14);
+}
+.review-page .suggestion-number {
+  color: #0b718c;
+  background: linear-gradient(
+    145deg,
+    rgba(168, 231, 240, 0.48),
+    rgba(180, 205, 252, 0.46)
+  );
+}
+
+/* Shared loading, footer and return affordance. */
+.create-page .site-footer,
+.solve-page .site-footer,
+.review-page .site-footer {
+  color: var(--scene-muted);
+  border-top-color: rgba(204, 235, 241, 0.26);
+}
+.create-page .back-top,
+.solve-page .back-top,
+.review-page .back-top {
+  color: #c9f2f7;
+  background: rgba(6, 25, 39, 0.78);
+  border-color: var(--scene-line);
+  box-shadow: 0 12px 30px rgba(0, 9, 17, 0.18);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+.solve-page .page-loading,
+.review-page .page-loading {
+  color: #c9e7ec;
+  background: rgba(7, 27, 42, 0.82);
+  border-color: var(--scene-line);
+  box-shadow: var(--scene-shell-shadow);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+}
+.solve-page [data-pointer-glow] > .pointer-glow-rim,
+.review-page [data-pointer-glow] > .pointer-glow-rim,
+.create-page [data-pointer-glow] > .pointer-glow-rim {
+  background: radial-gradient(
+    220px circle at var(--glow-x, 50%) var(--glow-y, 0px),
+    #d4faff,
+    #63d1e1 34%,
+    rgba(112, 151, 244, 0.18) 58%,
+    transparent 74%
+  );
+}
+
+@media (max-width: 760px) {
+  .create-page .create-composer,
+  .solve-page .challenge-view,
+  .solve-page .workspace-card,
+  .review-page .evaluation-card {
+    border-radius: 22px;
+  }
+  .create-page .hero-stage {
+    border-radius: 26px;
+  }
+}
+
+@media (max-width: 520px) {
+  .create-page .eyebrow,
+  .solve-page .section-kicker,
+  .review-page .section-kicker {
+    min-height: 30px;
+    padding: 6px 10px;
+  }
+  .create-page .hero-stage {
+    background: linear-gradient(
+      150deg,
+      rgba(5, 20, 32, 0.42),
+      rgba(5, 19, 30, 0.16)
+    );
+  }
+  .create-page .hero-trust > span {
+    background: rgba(7, 27, 41, 0.68);
+  }
+}

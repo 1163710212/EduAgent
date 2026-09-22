@@ -17,3 +17,10 @@ esbuild's `--bundle --minify --format=esm --target=es2020` options.
 The wrapper in `js/ui/motion.js` lazy-loads the library, respects reduced motion,
 and leaves all UI content usable if it fails to load. See `LICENSE.txt` for
 upstream license notices.
+
+## Optical background
+
+The current background uses the project's native WebGL renderer in
+`js/ui/optical-renderer.js`, not another vendor library. The former tsParticles
+bundle and build entry have been removed. Raster imagery is local and versioned;
+see [asset sources and final prompt](../assets/education/README.md).

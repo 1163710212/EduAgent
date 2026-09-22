@@ -40,6 +40,7 @@ export function renderReport(
 
   const scoreCard = document.createElement("div");
   scoreCard.className = "score-card";
+  scoreCard.dataset.pointerGlow = "";
   scoreCard.dataset.tone =
     score >= 80 ? "strong" : score >= 60 ? "building" : "review";
   const scoreLabel = document.createElement("div");
@@ -61,6 +62,15 @@ export function renderReport(
     `${Math.min(100, Math.max(0, score)) * 3.6}deg`,
   );
   meter.appendChild(scoreValue);
+  if (score >= 80) {
+    for (let index = 0; index < 3; index++) {
+      const sparkle = document.createElement("span");
+      sparkle.className = `score-sparkle score-sparkle-${index + 1}`;
+      sparkle.setAttribute("aria-hidden", "true");
+      sparkle.appendChild(makeIcon("sparkle"));
+      meter.appendChild(sparkle);
+    }
+  }
   const scoreStatus = document.createElement("span");
   scoreStatus.className = "score-status";
   scoreStatus.textContent =
@@ -69,13 +79,11 @@ export function renderReport(
       : score >= 60
         ? "Keep building"
         : "Review again";
-  const scoreNote = document.createElement("p");
-  scoreNote.className = "score-note";
-  scoreNote.textContent = "Every attempt builds understanding.";
-  scoreCard.append(scoreLabel, meter, scoreStatus, scoreNote);
+  scoreCard.append(scoreLabel, meter, scoreStatus);
 
   const feedbackCard = document.createElement("div");
   feedbackCard.className = "feedback-card";
+  feedbackCard.dataset.pointerGlow = "";
   const feedbackTitle = document.createElement("h3");
   feedbackTitle.append(
     makeIcon("messages-square"),
@@ -99,6 +107,7 @@ export function renderReport(
 
   const suggestionsCard = document.createElement("div");
   suggestionsCard.className = "suggestions-card";
+  suggestionsCard.dataset.pointerGlow = "";
   const suggestionsTitle = document.createElement("h3");
   suggestionsTitle.append(
     makeIcon("route"),
@@ -121,4 +130,10 @@ export function renderReport(
   summary.append(scoreCard, feedbackCard, suggestionsCard);
   container.appendChild(summary);
   revealElements([scoreCard, feedbackCard, suggestionsCard], { stagger: 0.09 });
+  revealElements(list.children, {
+    duration: 0.45,
+    distance: 8,
+    stagger: 0.07,
+    delay: 0.25,
+  });
 }

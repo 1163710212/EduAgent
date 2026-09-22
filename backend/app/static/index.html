@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f4f6f8" />
+    <meta name="theme-color" content="#071722" />
     <meta
       name="description"
       content="Create a focused coding challenge from a real GitHub repository."
@@ -23,43 +23,76 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css"
     />
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260922-clear-video" />
+    <link rel="stylesheet" href="/static/optical-background.css?v=20260922-clear-video" />
+    <link rel="stylesheet" href="/static/workflow-theme.css?v=20260922-clear-video" />
   </head>
   <body class="create-page">
+    <div
+      id="ambientBackground"
+      class="ambient-background create-video-background"
+      aria-hidden="true"
+      data-renderer="loading"
+      data-state="loading"
+    >
+      <video
+        id="createBackgroundVideoBackdrop"
+        class="create-background-video-backdrop"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        tabindex="-1"
+      >
+        <source
+          src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260325_120549_0cd82c36-56b3-4dd9-b190-069cfc3a623f.mp4"
+          type="video/mp4"
+        />
+      </video>
+      <video
+        id="createBackgroundVideo"
+        class="create-background-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="metadata"
+        tabindex="-1"
+      >
+        <source
+          src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260325_120549_0cd82c36-56b3-4dd9-b190-069cfc3a623f.mp4"
+          type="video/mp4"
+        />
+      </video>
+    </div>
     <a class="skip-link" href="#mainContent">Skip to content</a>
     <header class="topbar single-path" aria-label="EduAgent" data-page-motion>
       <span class="brand" aria-label="EduAgent">
         <span class="brand-mark" aria-hidden="true"
-          ><i class="ph-duotone ph-book-open-text"></i
+          ><i class="ph-duotone ph-book-open-text" data-learning-book></i
         ></span>
         <span class="brand-copy"
           ><span class="brand-name">EduAgent</span
           ><small>Learning atelier</small></span
         >
       </span>
-      <div class="system-status" title="EduAgent status">
-        <span class="status-dot" aria-hidden="true"></span><span>AI ready</span>
-      </div>
     </header>
 
     <main id="mainContent" class="app-shell">
       <section class="hero-stage" aria-labelledby="heroTitle">
-        <img
-          class="hero-photo"
-          src="/static/assets/pexels-adrien-olichon-glass-facade.jpg"
-          alt="Curved glass architecture under a clear blue sky"
-        />
-        <div class="hero-wash" aria-hidden="true"></div>
         <div class="hero-content">
           <div class="eyebrow" data-page-motion>
             <i class="ph-duotone ph-code-block"></i> Step 1 · Create
           </div>
-          <h1 id="heroTitle" data-page-motion>
-            Connect a repo.<br /><span>Build understanding.</span>
+          <h1 id="heroTitle">
+            <span class="title-line"
+              ><span data-title-motion>Connect a repo.</span></span
+            >
+            <span class="title-line title-line-accent"
+              ><span data-title-motion>Build understanding.</span></span
+            >
           </h1>
-          <p class="hero-description" data-page-motion>
-            Turn any repository into a focused practice session.
-          </p>
           <div class="hero-trust" aria-label="Product benefits">
             <span data-page-motion
               ><i class="ph-duotone ph-github-logo"></i
@@ -81,6 +114,7 @@
           class="create-composer"
           aria-labelledby="createTitle"
           data-page-motion
+          data-pointer-glow
         >
           <div class="composer-heading">
             <div class="heading-lockup">
@@ -94,9 +128,6 @@
             </div>
             <span class="live-badge"><span></span> Ready</span>
           </div>
-          <p class="composer-description">
-            Choose your source. Make the practice your own.
-          </p>
           <form id="challengeForm" class="challenge-form">
             <div class="form-group">
               <div class="form-group-heading">
@@ -180,13 +211,6 @@
             aria-live="polite"
           ></pre>
         </section>
-        <a
-          class="photo-credit"
-          href="https://www.pexels.com/photo/facade-of-modern-glass-building-under-blue-sky-5230095/"
-          target="_blank"
-          rel="noopener noreferrer"
-          >Photo · Adrien Olichon / Pexels</a
-        >
       </section>
     </main>
 
@@ -196,11 +220,13 @@
           ><i class="ph-duotone ph-book-open-text"></i></span
         ><span class="brand-name">EduAgent</span></span
       >
-      <p>Real code. Clear understanding.</p>
       <a href="#mainContent" class="back-top" aria-label="Back to top"
         ><i class="ph ph-arrow-up"></i
       ></a>
     </footer>
     <script type="module" src="/static/js/pages/create.js"></script>
+    <script type="module" src="/static/js/ui/video-background.js"></script>
+    <script type="module" src="/static/js/ui/scene-transition.js"></script>
+    <script type="module" src="/static/js/ui/pointer-glow.js"></script>
   </body>
 </html>

@@ -1,0 +1,174 @@
+/* Only the decorative surface is fixed. Content stays in normal flow. */
+html { scrollbar-gutter: stable; }
+body { min-width: 0; }
+.ambient-background { background: #070d12; z-index: 0; pointer-events: none; }
+/* Solve adapts the prompt's third, night-garden Philosophy video as its background. */
+.solve-video-background {
+  --solve-shift-x: 0px;
+  --solve-shift-y: 0px;
+  --solve-scale: 1;
+  background:
+    radial-gradient(ellipse at 50% 56%, rgba(15, 52, 53, .72), transparent 52%),
+    linear-gradient(90deg, #020609, #061114 28%, #061114 72%, #020609);
+}
+.solve-video-background::after { display: none; }
+.solve-background-video,
+.solve-background-veil {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.solve-background-video {
+  inset: 4%;
+  width: 92%;
+  height: 92%;
+  object-fit: cover;
+  object-position: center 56%;
+  opacity: 0;
+  filter: brightness(.82) saturate(.92);
+  transform: translate3d(var(--solve-shift-x), var(--solve-shift-y), 0)
+    scale(var(--solve-scale));
+  transition:
+    opacity 600ms ease,
+    filter 700ms cubic-bezier(.22, 1, .36, 1),
+    transform 520ms cubic-bezier(.22, 1, .36, 1);
+  will-change: transform, filter;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 70%, transparent 100%);
+  mask-image: radial-gradient(ellipse at center, #000 70%, transparent 100%);
+}
+.solve-video-background[data-renderer="video"] .solve-background-video {
+  opacity: 1;
+}
+.solve-video-background[data-renderer="fallback"] .solve-background-video {
+  display: none;
+}
+.solve-background-veil {
+  background:
+    linear-gradient(180deg, rgba(2, 8, 13, .22), rgba(2, 8, 13, .46)),
+    radial-gradient(circle at 50% 30%, transparent 0%, rgba(1, 7, 12, .12) 72%);
+  opacity: .78;
+  transition: opacity 700ms cubic-bezier(.22, 1, .36, 1);
+}
+.solve-video-background[data-attention="focused"] {
+  --solve-scale: 1;
+}
+.solve-video-background[data-attention="focused"] .solve-background-video {
+  filter: brightness(.55) saturate(.62);
+}
+.solve-video-background[data-attention="focused"] .solve-background-veil {
+  opacity: 1;
+}
+/* Review uses Foldcraft's cinematic full-cover motion treatment. */
+.review-video-background {
+  background: #11161d;
+}
+.review-video-background::after { display: none; }
+.review-background-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.review-background-video {
+  object-fit: cover;
+  object-position: 70% center;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+.review-video-background[data-renderer="video"] .review-background-video {
+  opacity: 1;
+}
+.review-video-background[data-renderer="fallback"] .review-background-video {
+  display: none;
+}
+/* Create adapts Mindloop's full-viewport looping-video treatment to EduAgent. */
+.create-video-background {
+  --video-shift-x: 0px;
+  --video-shift-y: 0px;
+  --video-scale: 1.06;
+  background: #151c25;
+}
+.create-video-background::after { display: none; }
+.create-video-background[data-renderer="video"] {
+  background: #151c25;
+}
+.create-background-video-backdrop,
+.create-background-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.create-background-video-backdrop {
+  display: none;
+}
+.create-background-video {
+  inset: -2%;
+  width: 104%;
+  height: 104%;
+  object-fit: cover;
+  object-position: 60% 60%;
+  opacity: .96;
+  filter: none;
+  transform: translate3d(var(--video-shift-x), var(--video-shift-y), 0)
+    scale(var(--video-scale));
+  transition: transform 420ms cubic-bezier(.22, 1, .36, 1), opacity 500ms ease;
+  will-change: transform;
+}
+.create-video-background[data-renderer="loading"] .create-background-video-backdrop,
+.create-video-background[data-renderer="loading"] .create-background-video {
+  opacity: 0;
+}
+.create-video-background[data-renderer="fallback"] .create-background-video-backdrop,
+.create-video-background[data-renderer="fallback"] .create-background-video {
+  display: none;
+}
+.create-video-background[data-backdrop="unavailable"] .create-background-video-backdrop {
+  display: none;
+}
+@media (min-aspect-ratio: 3/2) {
+  .create-background-video-backdrop {
+    display: block;
+    inset: -5%;
+    width: 110%;
+    height: 110%;
+    object-fit: cover;
+    object-position: center 60%;
+    opacity: .78;
+    filter: blur(20px) saturate(.92) brightness(.8);
+    transform: translate3d(var(--video-shift-x), var(--video-shift-y), 0)
+      scale(1.08);
+    transition: transform 420ms cubic-bezier(.22, 1, .36, 1), opacity 500ms ease;
+    will-change: transform;
+  }
+  .create-background-video {
+    inset: 0 auto 0 30%;
+    width: auto;
+    height: 112%;
+    aspect-ratio: 1624 / 1276;
+    object-fit: contain;
+    object-position: center;
+    opacity: .94;
+    transform: translate(-50%, -10vh);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+}
+/* The Create module keeps only a 20%-opacity tint over the page-level motion. */
+.create-page .hero-trust { margin-top: 44px; }
+@media (max-width: 700px) {
+  .create-page .hero-trust { margin-top: 26px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .create-background-video,
+  .create-background-video-backdrop,
+  .solve-background-video,
+  .solve-background-veil,
+  .review-background-video {
+    transition: none;
+  }
+}

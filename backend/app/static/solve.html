@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f4f6f8" />
+    <meta name="theme-color" content="#071722" />
     <meta
       name="description"
       content="Solve an EduAgent coding challenge with repository context."
@@ -23,32 +23,59 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css"
     />
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260922-clear-video" />
+    <link rel="stylesheet" href="/static/optical-background.css?v=20260922-clear-video" />
+    <link rel="stylesheet" href="/static/workflow-theme.css?v=20260922-clear-video" />
   </head>
   <body class="solve-page">
+    <div
+      id="ambientBackground"
+      class="ambient-background solve-video-background"
+      aria-hidden="true"
+      data-renderer="loading"
+      data-state="loading"
+      data-attention="normal"
+    >
+      <video
+        id="solveBackgroundVideo"
+        class="solve-background-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+        tabindex="-1"
+      >
+        <source
+          src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4"
+          type="video/mp4"
+        />
+      </video>
+      <div class="solve-background-veil"></div>
+    </div>
     <a class="skip-link" href="#mainContent">Skip to content</a>
     <header class="topbar single-path" aria-label="EduAgent" data-page-motion>
       <span class="brand" aria-label="EduAgent"
         ><span class="brand-mark"
-          ><i class="ph-duotone ph-book-open-text"></i></span
+          ><i class="ph-duotone ph-book-open-text" data-learning-book></i></span
         ><span class="brand-copy"
           ><span class="brand-name">EduAgent</span
           ><small>Learning atelier</small></span
         ></span
       >
-      <div class="system-status">
-        <span class="status-dot"></span><span>AI ready</span>
-      </div>
     </header>
 
     <main id="mainContent" class="app-shell page-shell">
       <section class="workflow-shell" aria-labelledby="workspaceTitle">
         <div class="workflow-intro" data-page-motion>
-          <div>
+          <div class="workflow-intro-copy">
             <span class="section-kicker">Step 2 · Solve</span>
-            <h1 id="workspaceTitle">Solve with context.</h1>
+            <h1 id="workspaceTitle">
+              <span class="title-line"
+                ><span data-title-motion>Solve with context.</span></span
+              >
+            </h1>
           </div>
-          <p>Read the source, then explain or complete the key logic.</p>
         </div>
         <div id="workspaceLoading" class="page-loading">
           <span class="spinner-dark"></span>
@@ -63,7 +90,6 @@
           >
             <div class="challenge-header">
               <div>
-                <span class="section-kicker">Your challenge</span>
                 <h2 id="challengeTitle">Challenge details</h2>
               </div>
               <div class="challenge-meta">
@@ -92,18 +118,14 @@
 
           <section
             class="workspace-card"
+            data-pointer-glow
             aria-labelledby="answerTitle"
             data-motion
           >
             <div class="card-heading">
               <div class="heading-icon"><i class="ph-duotone ph-code"></i></div>
               <div>
-                <span class="step-label">Workspace</span>
                 <h2 id="answerTitle">Your response</h2>
-                <p>
-                  Work from the repository context and submit when your
-                  reasoning is clear.
-                </p>
               </div>
               <div class="session-row">
                 <div class="field">
@@ -142,20 +164,15 @@
                   aria-label="Challenge code"
                 ></textarea>
                 <div class="editor-caption">
-                  <span id="sourceLineCount">0 lines</span
-                  ><span>Challenge source</span>
+                  <span id="sourceLineCount">0 lines</span>
                 </div>
               </div>
               <div class="answer-column">
                 <div id="rewriteAnswerArea" class="answer-area hidden">
                   <div class="answer-heading">
                     <div>
-                      <span>Your response</span>
                       <h3>Explain the intent</h3>
                     </div>
-                    <span class="answer-mode"
-                      ><i class="ph ph-chats-circle"></i> Explain</span
-                    >
                   </div>
                   <div class="composer-shell">
                     <textarea
@@ -163,25 +180,18 @@
                       class="explain"
                       rows="8"
                       aria-label="Code explanation"
-                      placeholder="Explain the semantics, control flow, and design intent…"
+                      placeholder="Explain the code’s intent and logic…"
                     ></textarea>
                     <div class="composer-footer">
-                      <span
-                        ><i class="ph ph-info"></i> Make your reasoning
-                        clear</span
-                      ><span id="explanationCount">0 chars</span>
+                      <span id="explanationCount">0 chars</span>
                     </div>
                   </div>
                 </div>
                 <div id="blankFillAnswerArea" class="answer-area hidden">
                   <div class="answer-heading">
                     <div>
-                      <span>Your response</span>
                       <h3>Complete the logic</h3>
                     </div>
-                    <span class="answer-mode"
-                      ><i class="ph ph-brackets-curly"></i> Complete</span
-                    >
                   </div>
                   <div class="composer-shell code-composer">
                     <textarea
@@ -190,21 +200,14 @@
                       rows="9"
                       spellcheck="false"
                       aria-label="Code completion"
-                      placeholder="Enter the complete replacement for the BLANK region…"
+                      placeholder="Replace the BLANK region; preserve indentation…"
                     ></textarea>
                     <div class="composer-footer">
-                      <span
-                        ><i class="ph ph-scan"></i> Preserve logic and
-                        indentation</span
-                      ><span id="completionCount">0 lines</span>
+                      <span id="completionCount">0 lines</span>
                     </div>
                   </div>
                 </div>
                 <div class="submit-row">
-                  <p>
-                    <i class="ph-duotone ph-brain"></i> AI evaluates your answer
-                    in context.
-                  </p>
                   <button
                     id="btnSubmit"
                     class="button button-primary"
@@ -232,7 +235,6 @@
           ><i class="ph-duotone ph-book-open-text"></i></span
         ><span class="brand-name">EduAgent</span></span
       >
-      <p>Real code. Clear understanding.</p>
       <a href="#mainContent" class="back-top" aria-label="Back to top"
         ><i class="ph ph-arrow-up"></i
       ></a>
@@ -241,5 +243,9 @@
       <i class="ph-duotone ph-check-circle"></i><span></span>
     </div>
     <script type="module" src="/static/js/pages/solve.js"></script>
+    <script type="module" src="/static/js/ui/solve-video-background.js"></script>
+    <script type="module" src="/static/js/ui/solve-focus.js"></script>
+    <script type="module" src="/static/js/ui/scene-transition.js"></script>
+    <script type="module" src="/static/js/ui/pointer-glow.js"></script>
   </body>
 </html>

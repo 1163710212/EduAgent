@@ -17,6 +17,7 @@ import {
   byId,
   copyText,
   initPageMotion,
+  navigateForward,
   setButtonLoading,
   setLog,
   showToast,
@@ -40,6 +41,7 @@ function switchFile(path, shouldScroll = false) {
   byId("fileSelect").value = path;
   byId("codeViewer").value = files[path];
   byId("sourceLineCount").textContent = `${countLines(files[path])} lines`;
+  // Optional file artwork observes the same validated selection as View code.
   if (shouldScroll) animateFeedback(byId("codeViewer"));
   if (shouldScroll) {
     scrollToElement(byId("filesArea"), { block: "center" });
@@ -111,6 +113,7 @@ async function loadWorkspace() {
 }
 
 async function handleSubmit() {
+  if (byId("btnSubmit").disabled) return;
   setLog(byId("submitLog"), "");
   let payload;
   try {
@@ -137,7 +140,7 @@ async function handleSubmit() {
       "Review complete. Opening your feedback…",
       "success",
     );
-    window.location.replace(stepUrl("review", challenge.session_id));
+    await navigateForward(stepUrl("review", challenge.session_id));
   } catch (error) {
     setLog(byId("submitLog"), error.message || String(error), "error");
   } finally {
