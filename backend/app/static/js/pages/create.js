@@ -10,13 +10,11 @@ import {
 } from "../ui/common.js";
 
 function formPayload() {
-  const filePath = byId("filePath").value.trim();
   return {
     repo_url: byId("repoUrl").value.trim(),
     ref: byId("ref").value.trim() || "main",
     language: byId("language").value,
     task_type: byId("taskType").value,
-    file_paths: filePath ? [filePath] : [],
   };
 }
 
@@ -33,14 +31,14 @@ async function handleCreate() {
   setButtonLoading(byId("btnCreate"), true, "Analyzing repository");
   setLog(
     byId("createLog"),
-    "Reading the repository and building your challenge…",
+    "Selecting three key files and preparing your questions…",
   );
   try {
     const challenge = await createChallenge(payload);
     startWorkflow(challenge);
     setLog(
       byId("createLog"),
-      "Challenge ready. Opening your workspace…",
+      "Three questions ready. Opening question 1…",
       "success",
     );
     await navigateForward(stepUrl("solve", challenge.session_id));

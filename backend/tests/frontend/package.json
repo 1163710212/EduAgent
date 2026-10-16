@@ -2,7 +2,8 @@
   "name": "eduagent-ui-checks",
   "private": true,
   "scripts": {
-    "check": "node check-ui.cjs"
+    "check": "node check-ui.cjs",
+    "check:workflow": "node check-three-questions.cjs"
   },
   "engines": {
     "node": ">=18"

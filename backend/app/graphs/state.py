@@ -11,6 +11,8 @@ class ChallengeState(TypedDict, total=False):
     language: str
     task_type: str
     requested_paths: List[str]
+    question_count: int
+    timings: Dict[str, float]
 
     # from github
     target_paths: List[str]

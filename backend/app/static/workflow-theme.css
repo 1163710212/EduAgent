@@ -281,6 +281,14 @@
   margin-bottom: 24px;
   padding-bottom: 22px;
   border-bottom: 1px solid rgba(187, 228, 237, 0.14);
+  flex-wrap: wrap;
+}
+.solve-page .workspace-card > .card-heading > div:nth-child(2) {
+  flex: 1 1 140px;
+}
+.solve-page .session-row {
+  min-width: 0;
+  max-width: 100%;
 }
 .solve-page .files-area {
   background: rgba(10, 36, 53, 0.94);
@@ -444,4 +452,43 @@
   .create-page .hero-trust > span {
     background: rgba(7, 27, 41, 0.68);
   }
+}
+/* Stateful learning workflow; presentation stays separate from grading logic. */
+.selection-note, .score-method { color: #b7c6d7; font-size: .82rem; line-height: 1.6; margin-top: .75rem; }
+.question-progress {
+  display: flex; align-items: center; gap: 1rem; padding: 1rem 1.4rem;
+  border: 1px solid rgba(171, 200, 225, .2); border-radius: 18px;
+  background: rgba(11, 25, 40, .82); color: #e7f1fc; font-size: .85rem;
+}
+.question-progress progress { flex: 1; min-width: 40px; height: 6px; accent-color: #75b6ff; }
+.question-progress span:last-child { color: #a9bacd; }
+.review-status-bar { margin-bottom: 1rem; }
+.review-page .review-status-bar .light-status {
+  color: #c2d8e7; background: rgba(11, 29, 43, .86); border-color: rgba(171, 200, 225, .2);
+}
+.review-page .review-status-bar .light-status[data-status="error"] {
+  color: #ffd4cf; background: rgba(71, 31, 37, .88); border-color: rgba(255, 150, 145, .3);
+}
+.review-section-title { margin: 0 0 1.1rem; color: #edf5ff; font-size: 1.1rem; }
+.question-reviews { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.question-review { min-width: 0; padding: 1.3rem; border: 1px solid rgba(160, 198, 225, .2); border-radius: 20px; background: rgba(8, 21, 35, .66); }
+.question-review-heading { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.question-review-heading h4 { color: #e9f2ff; font-size: .95rem; }
+.question-score { color: #b6dbff; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.question-review-path { display: block; margin: .8rem 0 1rem; color: #9fb9d5; overflow-wrap: anywhere; font-size: .78rem; }
+.question-feedback { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; color: #d9e6f3; font-size: .9rem; }
+.question-suggestions { padding-left: 1.2rem; margin-top: 1rem; color: #b0c6db; line-height: 1.7; font-size: .83rem; overflow-wrap: anywhere; }
+.question-suggestions li + li { margin-top: .5rem; }
+.overall-review { margin-top: 0; padding-top: 0; border-top: 0; }
+.solve-page .challenge-view { position: static; top: auto; }
+.question-assessment { grid-column: 1 / -1; min-width: 0; padding: clamp(1rem, 3vw, 2.5rem); border: 1px solid rgba(160, 198, 225, .25); border-radius: 28px; background: rgba(8, 21, 35, .94); scroll-margin-top: 2rem; }
+.question-assessment h2 { color: #edf5ff; margin-bottom: 1.2rem; }
+.question-assessment .submit-row { margin-top: 1.5rem; }
+.overall-review .score-method { margin: -.3rem 0 1.2rem; }
+.review-strengths { margin-top: 1.25rem; color: #c7dfd7; line-height: 1.7; }
+.review-strengths ul { padding-left: 1.2rem; margin-top: .5rem; }
+@media (max-width: 1000px) { .question-reviews { grid-template-columns: 1fr; } }
+@media (max-width: 560px) {
+  .question-progress { flex-wrap: wrap; gap: .6rem; padding: .9rem; }
+  .question-progress span:last-child { flex-basis: 100%; }
 }

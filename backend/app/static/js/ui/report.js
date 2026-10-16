@@ -23,6 +23,7 @@ export function renderReport(
   container,
   evaluation,
   fallbackTaskType = "unknown",
+  options = {},
 ) {
   clearElement(container);
   const taskType = evaluation.task_type || fallbackTaskType;
@@ -46,7 +47,7 @@ export function renderReport(
   const scoreLabel = document.createElement("div");
   scoreLabel.className = "score-label";
   scoreLabel.append(
-    document.createTextNode("Overall score"),
+    document.createTextNode(options.scoreLabel || "Overall score"),
     makeIcon("gauge"),
   );
   const scoreValue = document.createElement("div");
@@ -105,6 +106,11 @@ export function renderReport(
   });
   feedbackCard.append(feedbackTitle, feedback, meta);
 
+  summary.append(scoreCard, feedbackCard);
+  container.appendChild(summary);
+  revealElements([scoreCard, feedbackCard], { stagger: 0.09 });
+  if (options.showSuggestions === false) return;
+
   const suggestionsCard = document.createElement("div");
   suggestionsCard.className = "suggestions-card";
   suggestionsCard.dataset.pointerGlow = "";
@@ -127,9 +133,8 @@ export function renderReport(
   });
   suggestionsCard.append(suggestionsTitle, list);
 
-  summary.append(scoreCard, feedbackCard, suggestionsCard);
-  container.appendChild(summary);
-  revealElements([scoreCard, feedbackCard, suggestionsCard], { stagger: 0.09 });
+  summary.append(suggestionsCard);
+  revealElements([suggestionsCard], { delay: 0.18 });
   revealElements(list.children, {
     duration: 0.45,
     distance: 8,

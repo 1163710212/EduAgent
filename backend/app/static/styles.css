@@ -834,8 +834,21 @@ i[class*=" ph-"] {
 .solve-page .workspace-content {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-areas:
+    "progress progress"
+    "context response";
   align-items: start;
   gap: 24px;
+}
+.solve-page .workspace-content > .question-progress {
+  grid-area: progress;
+  min-width: 0;
+}
+.solve-page .workspace-content > .challenge-view {
+  grid-area: context;
+}
+.solve-page .workspace-content > .workspace-card {
+  grid-area: response;
 }
 .challenge-view,
 .workspace-card {
@@ -1584,6 +1597,7 @@ i[class*=" ph-"] {
   }
   .solve-page .workspace-content {
     grid-template-columns: 1fr;
+    grid-template-areas: "progress" "context" "response";
   }
   .challenge-view {
     position: static;

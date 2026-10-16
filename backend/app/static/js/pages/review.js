@@ -1,53 +1,69 @@
-import { getReview } from "../api/challenges.js";
+import { getReview, evaluateNext } from "../api/challenges.js";
 import {
   getWorkflowState,
   saveEvaluation,
   sessionIdFromLocation,
-  stepUrl,
 } from "../state/workflow-store.js";
-import { byId, initPageMotion } from "../ui/common.js";
+import { byId, initPageMotion, setLog } from "../ui/common.js";
 import { renderReport } from "../ui/report.js";
+import { renderWorkflowReport } from "../ui/workflow-report.js?v=20261014-overall-only";
 
-function showUnavailable(message, sessionId) {
-  console.warn(`[review] ${message}`);
-  window.location.replace(stepUrl(sessionId ? "solve" : "create", sessionId));
-}
+let running = false;
+let disposed = false;
 
-function showReview(evaluation, taskType, sessionId, fromApi = false) {
+function showReview(response) {
   byId("reviewLoading").classList.add("hidden");
   byId("reviewContent").classList.remove("hidden");
-  renderReport(byId("report"), evaluation, taskType);
-  // Notify optional artwork only after a real evaluation has been rendered.
-  document.body.dataset.reviewSession = sessionId;
-  document.body.dataset.reviewSource = fromApi ? "api" : "cache";
-  document.body.dataset.reviewReady = "true";
-  document.dispatchEvent(new CustomEvent("eduagent:review-ready"));
+  if (response.workflow_version === 2) {
+    renderWorkflowReport(byId("report"), response);
+    setLog(byId("reviewStatus"), response.status === "complete"
+      ? "All three answers assessed. Your overall review is ready."
+      : "All answers assessed. Preparing overall feedback…");
+  } else {
+    renderReport(byId("report"), response.evaluation, response.task_type);
+  }
+  if (response.evaluation) {
+    saveEvaluation(response.session_id, response.evaluation);
+    document.body.dataset.reviewSession = response.session_id;
+    document.body.dataset.reviewSource = "api";
+    document.body.dataset.reviewReady = "true";
+    document.dispatchEvent(new CustomEvent("eduagent:review-ready"));
+  }
 }
 
 async function loadReview() {
-  const stored = getWorkflowState();
-  const sessionId = sessionIdFromLocation() || stored.sessionId;
-  if (!sessionId) {
-    showUnavailable("Complete a challenge before opening Review.", "");
-    return;
-  }
-
-  byId("reviewSession").textContent = `session: ${sessionId}`;
+  if (running) return;
+  running = true;
+  byId("retryReview").classList.add("hidden");
+  const sessionId = sessionIdFromLocation() || getWorkflowState().sessionId;
+  byId("reviewSession").textContent = sessionId ? `session: ${sessionId}` : "";
   try {
-    if (stored.sessionId === sessionId && stored.evaluation) {
-      showReview(stored.evaluation, stored.challenge?.task_type, sessionId);
-    } else {
-      const response = await getReview(sessionId);
-      saveEvaluation(sessionId, response.evaluation);
-      showReview(response.evaluation, response.task_type, sessionId, true);
+    if (!sessionId) throw new Error("Complete the three questions before opening Review.");
+    let response = await getReview(sessionId);
+    if (disposed) return;
+    showReview(response);
+    if (!disposed && response.workflow_version === 2 && response.status !== "complete") {
+      response = await evaluateNext(sessionId);
+      if (!disposed) showReview(response);
     }
   } catch (error) {
-    showUnavailable(error.message || String(error), sessionId);
+    if (!disposed) {
+      byId("reviewLoading").classList.add("hidden");
+      setLog(byId("reviewStatus"), error.message || String(error), "error");
+      byId("retryReview").classList.remove("hidden");
+    }
+  } finally {
+    running = false;
   }
 }
 
 function init() {
   initPageMotion();
+  byId("retryReview").addEventListener("click", loadReview);
+  window.addEventListener("pagehide", () => { disposed = true; });
+  window.addEventListener("pageshow", (event) => {
+    if (event.persisted) { disposed = false; loadReview(); }
+  });
   loadReview();
 }
 

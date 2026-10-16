@@ -13,7 +13,9 @@ async function request(url, options) {
   const response = await fetch(url, options);
   const data = await parseResponse(response);
   if (!response.ok) {
-    throw new Error(data.detail || `Request failed (${response.status})`);
+    const detail = Array.isArray(data.detail)
+      ? data.detail.map((entry) => entry.msg).join("; ") : data.detail;
+    throw new Error(detail || `Request failed (${response.status})`);
   }
   return data;
 }
@@ -40,4 +42,16 @@ export function submitChallenge(sessionId, payload) {
 
 export function getReview(sessionId) {
   return request(`/api/challenges/${encodeURIComponent(sessionId)}/review`);
+}
+
+export function continueChallenge(sessionId, questionId) {
+  return request(`/api/challenges/${encodeURIComponent(sessionId)}/continue`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question_id: questionId }),
+  });
+}
+
+export function evaluateNext(sessionId) {
+  return request(`/api/challenges/${encodeURIComponent(sessionId)}/review/evaluate`, { method: "POST" });
 }

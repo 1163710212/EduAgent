@@ -644,6 +644,9 @@ async function checkCinematicBackgrounds(browser) {
     await page.goto(`${baseUrl}/solve?session_id=${challenge.session_id}`);
     await page.locator('#workspaceContent').waitFor({state:'visible'});
     await page.locator('#ambientBackground[data-renderer="video"][data-state="running"]').waitFor();
+    // Solve now restores authoritative server progress asynchronously. Wait for
+    // its entrance animation before measuring pointer-only displacement.
+    await settle(page);
     assert.equal(await page.locator('#opticalCanvas').count(),0);
     const solveVideoAttributes=await page.locator('#solveBackgroundVideo').evaluate(video=>({
       autoplay:video.autoplay,muted:video.muted,loop:video.loop,playsInline:video.playsInline,
@@ -671,14 +674,19 @@ async function checkCinematicBackgrounds(browser) {
     assert.deepEqual(solveAfter.form,solveBefore.form,"Background interaction must not move answer content");
     await page.locator('#explanation').fill('A stable draft while the educational background rests.');
     await page.locator('#ambientBackground[data-state="calm"]').waitFor();
-    await page.waitForTimeout(750);
+    // Wait for the CSS transition itself, not a fixed wall-clock delay under GPU load.
+    await page.waitForFunction(() => {
+      const filter = getComputedStyle(document.querySelector('#solveBackgroundVideo')).filter;
+      const value = Number(filter.match(/brightness\(([^)]+)\)/)?.[1]);
+      return Math.abs(value - .55) < .001;
+    });
     const focusedVideo=await page.locator('#solveBackgroundVideo').evaluate(video=>({
       playbackRate:video.playbackRate,
       filter:getComputedStyle(video).filter,
       transform:getComputedStyle(video).transform,
     }));
     assert.equal(focusedVideo.playbackRate,.45,"Typing focus must slow the Solve video");
-    assert.ok(focusedVideo.filter.includes('brightness(0.55)'),"Typing focus must dim the Solve video");
+    assert.ok(Math.abs(Number(focusedVideo.filter.match(/brightness\(([^)]+)\)/)?.[1]) - .55) < .001,"Typing focus must dim the Solve video");
     await page.mouse.move(1300,200,{steps:8});
     await page.waitForTimeout(600);
     assert.equal(await page.locator('#solveBackgroundVideo').evaluate(video=>getComputedStyle(video).transform),focusedVideo.transform,"Typing focus must suspend mouse parallax");

@@ -106,6 +106,10 @@ if (layer && video) {
   video.addEventListener("seeking", alignBackdrop);
   video.addEventListener("timeupdate", alignBackdrop);
   video.addEventListener("error", markUnavailable);
+  // <source> load errors do not bubble to the parent <video> element.
+  video.querySelectorAll("source").forEach((source) => {
+    source.addEventListener("error", markUnavailable);
+  });
   backdrop?.addEventListener("error", () => {
     layer.dataset.backdrop = "unavailable";
   });
@@ -132,6 +136,7 @@ if (layer && video) {
       synchronize();
     }).observe(layer);
 
-  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) markReady();
+  if (video.error || video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) markUnavailable();
+  else if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) markReady();
   else synchronize();
 }

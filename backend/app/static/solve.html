@@ -23,9 +23,9 @@
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/duotone/style.css"
     />
-    <link rel="stylesheet" href="/static/styles.css?v=20260922-clear-video" />
-    <link rel="stylesheet" href="/static/optical-background.css?v=20260922-clear-video" />
-    <link rel="stylesheet" href="/static/workflow-theme.css?v=20260922-clear-video" />
+    <link rel="stylesheet" href="/static/styles.css?v=20261001-solve-layout" />
+    <link rel="stylesheet" href="/static/optical-background.css?v=20261001-solve-layout" />
+    <link rel="stylesheet" href="/static/workflow-theme.css?v=20261014-solve-feedback-cleanup" />
   </head>
   <body class="solve-page">
     <div
@@ -81,8 +81,17 @@
           <span class="spinner-dark"></span>
           <p>Loading challenge…</p>
         </div>
+        <div id="workspaceError" class="status-message light-status hidden" role="alert">
+          <p id="workspaceErrorText"></p>
+          <button id="retryWorkspace" class="ghost-btn" type="button">Retry loading</button>
+        </div>
 
         <div id="workspaceContent" class="workspace-content hidden">
+          <div class="question-progress" aria-live="polite">
+            <span id="questionProgressLabel">Question 1 of 3</span>
+            <progress id="questionProgress" max="3" value="1" aria-label="Current question"></progress>
+            <span id="questionSavedCount">0 answers assessed</span>
+          </div>
           <section
             class="challenge-view"
             aria-labelledby="challengeTitle"
@@ -112,6 +121,7 @@
                   <h3>Files</h3>
                 </div>
                 <ul id="challengeFiles" class="file-list"></ul>
+                <p id="selectionReason" class="selection-note"></p>
               </div>
             </div>
           </section>
@@ -226,6 +236,14 @@
               </div>
             </div>
           </section>
+          <section id="questionAssessment" class="question-assessment hidden" aria-labelledby="questionAssessmentTitle">
+            <h2 id="questionAssessmentTitle" tabindex="-1">Question feedback</h2>
+            <div id="questionReport" class="report" aria-live="polite"></div>
+            <div class="submit-row">
+              <button id="btnContinue" class="button button-primary" type="button"><span>Continue to next question</span><i class="ph ph-arrow-right"></i></button>
+            </div>
+            <p id="continueLog" class="status-message light-status" role="status"></p>
+          </section>
         </div>
       </section>
     </main>
@@ -242,7 +260,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite">
       <i class="ph-duotone ph-check-circle"></i><span></span>
     </div>
-    <script type="module" src="/static/js/pages/solve.js"></script>
+    <script type="module" src="/static/js/pages/solve.js?v=20261014-solve-feedback-cleanup"></script>
     <script type="module" src="/static/js/ui/solve-video-background.js"></script>
     <script type="module" src="/static/js/ui/solve-focus.js"></script>
     <script type="module" src="/static/js/ui/scene-transition.js"></script>

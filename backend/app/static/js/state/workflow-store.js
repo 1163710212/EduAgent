@@ -42,11 +42,14 @@ export function startWorkflow(challenge) {
 export function cacheChallenge(challenge) {
   const current = read();
   const isSameSession = current.sessionId === challenge.session_id;
+  const isSameQuestion = isSameSession && current.challenge?.question_id === challenge.question_id;
   return write({
     ...emptyState(),
     ...(isSameSession ? current : {}),
     sessionId: challenge.session_id,
-    challenge
+    challenge,
+    answerDraft: isSameQuestion ? current.answerDraft : emptyState().answerDraft,
+    evaluation: null
   });
 }
 

@@ -170,9 +170,11 @@ def test_header_scrolls_in_normal_page_flow():
     assert "box-shadow: none;" in header_styles
     for page_name in ("index.html", "solve.html", "review.html"):
         page = (STATIC_DIR / page_name).read_text(encoding="utf-8")
-        assert '/static/styles.css?v=20260922-clear-video' in page
-        assert '/static/optical-background.css?v=20260922-clear-video' in page
-        assert '/static/workflow-theme.css?v=20260922-clear-video' in page
+        version = "20261001-solve-layout" if page_name == "solve.html" else "20260922-clear-video"
+        assert f'/static/styles.css?v={version}' in page
+        assert f'/static/optical-background.css?v={version}' in page
+        theme_version = {"review.html": "20261014-overall-only", "solve.html": "20261014-solve-feedback-cleanup"}.get(page_name, version)
+        assert f'/static/workflow-theme.css?v={theme_version}' in page
         assert '<meta name="theme-color" content="#071722" />' in page
         assert "AI ready" not in page
         assert "header-actions" not in page
@@ -243,8 +245,10 @@ def test_solve_video_background_has_performance_and_lifecycle_guards():
     assert css.status_code == 200
     assert "pointer-events: none" in css.text
     assert ".solve-video-background[data-attention=\"focused\"]" in css.text
-    assert "width: 92%;" in css.text
-    assert "height: 92%;" in css.text
+    solve_video = css.text.split(".solve-background-video {", 1)[1].split("}", 1)[0]
+    assert "inset: 0;" in solve_video
+    assert "width: 100%;" in solve_video
+    assert "height: 100%;" in solve_video
     assert "object-fit: cover;" in css.text
     assert "--solve-scale: 1;" in css.text
     assert "radial-gradient(ellipse at center, #000 70%, transparent 100%)" in css.text

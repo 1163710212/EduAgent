@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
@@ -17,6 +17,7 @@ from app.core.config import settings
 from app.core.mcp import GitHubMCP
 from app.services.db import init_db
 from app.services import repository
+from app.services import workflow
 from app.graphs.challenge_graph import build_challenge_graph
 from app.graphs.evaluation_graph import build_evaluation_graph
 
@@ -61,8 +62,6 @@ class CreateChallengeRequest(BaseModel):
     ref: str = "main"
     language: str = "python"
     task_type: Literal["rewrite", "blank_fill"] = "rewrite"
-    # 可选：指定文件路径（否则自动挑 1 个）
-    file_paths: List[str] = Field(default_factory=list)
 
     @field_validator("repo_url")
     @classmethod
@@ -82,22 +81,42 @@ class CreateChallengeResponse(BaseModel):
     files: Dict[str, str]  # modified files shown to student
     edits: List[Dict[str, Any]]
     blanks: List[Dict[str, Any]]
+    workflow_version: int = 2
+    question_id: str
+    question_index: int
+    question_count: int
+    file_path: str
+    selection_reason: str
 
 
 class SubmitRequest(BaseModel):
+    question_id: str | None = None
     explanation_md: str = ""
     filled_files: Dict[str, str]
 
 
+class ContinueRequest(BaseModel):
+    question_id: str
+
+
 class SubmitResponse(BaseModel):
     session_id: str
-    evaluation: Dict[str, Any]
+    evaluation: Dict[str, Any] | None = None
+    workflow_version: int = 1
+    question_count: int = 1
+    completed_count: int = 1
+    status: str = "complete"
+    challenge: Dict[str, Any] | None = None
 
 
 class ReviewResponse(BaseModel):
     session_id: str
     task_type: Literal["rewrite", "blank_fill"]
-    evaluation: Dict[str, Any]
+    evaluation: Dict[str, Any] | None = None
+    workflow_version: int = 1
+    question_count: int = 1
+    evaluated_count: int = 1
+    status: str = "complete"
 
 
 @asynccontextmanager
@@ -134,6 +153,11 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Edu-Agent", lifespan=lifespan)
+
+
+@app.exception_handler(workflow.WorkflowError)
+async def workflow_error_handler(request, exc):
+    return JSONResponse(status_code=exc.status, content={"detail": str(exc)})
 
 app.add_middleware(
     CORSMiddleware,
@@ -175,7 +199,7 @@ def favicon():
 
 
 @app.post("/api/challenges/create", response_model=CreateChallengeResponse)
-async def create_challenge(req: CreateChallengeRequest):
+async def create_challenge(req: CreateChallengeRequest, response: Response):
     graph = app.state.challenge_graph
 
     state = {
@@ -183,7 +207,7 @@ async def create_challenge(req: CreateChallengeRequest):
         "ref": req.ref,
         "language": req.language,
         "task_type": req.task_type,
-        "requested_paths": req.file_paths,
+        "question_count": 3,
     }
 
     try:
@@ -208,6 +232,11 @@ async def create_challenge(req: CreateChallengeRequest):
     challenge = out.get("challenge")
     if not isinstance(challenge, dict):
         raise HTTPException(status_code=500, detail="Invalid challenge artifact generated.")
+    workflow.validate_sources(challenge, status=502)
+    questions = challenge.get("questions", [])
+    if (not workflow.is_multi(challenge) or len(questions) != 3
+            or len({q.get("file_path") for q in questions}) != 3):
+        raise HTTPException(status_code=502, detail="The repository must produce three questions from distinct source files.")
     task_type = challenge.get("task_type", req.task_type)
     if task_type not in ("rewrite", "blank_fill"):
         task_type = req.task_type
@@ -231,17 +260,12 @@ async def create_challenge(req: CreateChallengeRequest):
         raise HTTPException(status_code=500, detail=f"Failed to persist challenge session: {e}")
 
     # 返回给学生端：仅返回作答所需字段
-    resp = {
-        "session_id": row.id,
-        "task_type": task_type,
-        "title": challenge["title"],
-        "language": challenge["language"],
-        "student_instructions_md": challenge["student_instructions_md"],
-        "files": challenge["files"],
-        "edits": challenge["edits"],
-        "blanks": challenge.get("blanks", []),
-    }
-    return resp
+    response.headers["Server-Timing"] = ", ".join(
+        f"{stage};dur={seconds * 1000:.1f}"
+        for stage, seconds in out.get("timings", {}).items()
+        if stage in {"select_files", "fetch_files", "generate_questions"}
+    )
+    return workflow.progress(row.id, challenge)["challenge"]
 
 
 @app.get("/api/challenges/{session_id}")
@@ -251,6 +275,9 @@ def get_challenge(session_id: str):
         raise HTTPException(status_code=404, detail="Session not found")
 
     challenge = json.loads(row.challenge_json)
+    workflow.validate_sources(challenge)
+    if workflow.is_multi(challenge):
+        return workflow.progress(row.id, challenge)
     task_type = challenge.get("task_type", "rewrite")
     if task_type not in ("rewrite", "blank_fill"):
         task_type = "rewrite"
@@ -282,6 +309,9 @@ async def submit(session_id: str, req: SubmitRequest):
         raise HTTPException(status_code=404, detail="Session not found")
 
     challenge = json.loads(row.challenge_json)
+    workflow.validate_sources(challenge)
+    if workflow.is_multi(challenge):
+        return await workflow.accept(row, challenge, req.question_id, req.explanation_md, req.filled_files, app.state.eval_graph)
     graph = app.state.eval_graph
 
     state = {
@@ -316,11 +346,28 @@ async def submit(session_id: str, req: SubmitRequest):
     return {"session_id": session_id, "evaluation": evaluation}
 
 
+@app.post("/api/challenges/{session_id}/continue", response_model=SubmitResponse)
+def continue_challenge(session_id: str, req: ContinueRequest):
+    row = repository.get_challenge_session(session_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Session not found")
+    challenge = json.loads(row.challenge_json)
+    workflow.validate_sources(challenge)
+    if not workflow.is_multi(challenge):
+        raise HTTPException(status_code=409, detail="Single-question sessions have no next question.")
+    return workflow.continue_after_feedback(session_id, challenge, req.question_id)
+
+
 @app.get("/api/challenges/{session_id}/review", response_model=ReviewResponse)
 def get_latest_review(session_id: str):
     session = repository.get_challenge_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    challenge = json.loads(session.challenge_json)
+    workflow.validate_sources(challenge)
+    if workflow.is_multi(challenge):
+        return workflow.review(session_id, challenge)
 
     submission = repository.get_latest_submission(session_id)
     if not submission:
@@ -336,3 +383,15 @@ def get_latest_review(session_id: str):
         "task_type": task_type,
         "evaluation": json.loads(submission.evaluation_json),
     }
+
+
+@app.post("/api/challenges/{session_id}/review/evaluate", response_model=ReviewResponse)
+async def evaluate_review(session_id: str):
+    row = repository.get_challenge_session(session_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Session not found")
+    challenge = json.loads(row.challenge_json)
+    workflow.validate_sources(challenge)
+    if not workflow.is_multi(challenge):
+        return get_latest_review(session_id)
+    return await workflow.evaluate_next(row, challenge, app.state.eval_graph)

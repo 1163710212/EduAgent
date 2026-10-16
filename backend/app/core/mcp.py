@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
+from urllib.parse import quote
+
+import httpx
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
@@ -16,6 +19,28 @@ class GitHubMCP:
     """
     client: Optional[MultiServerMCPClient] = None
     tools_by_name: Optional[Dict[str, Any]] = None
+
+    async def repository_tree(self, owner: str, repo: str, ref: str) -> dict:
+        """Read-only fast path when the MCP server does not expose Git trees.
+
+        The existing GitHub credential is sent only to api.github.com. Never
+        follow redirects with it, or cache mutable branch names across requests.
+        """
+        headers = {"Accept": "application/vnd.github+json"}
+        if settings.GITHUB_MCP_PAT:
+            headers["Authorization"] = f"Bearer {settings.GITHUB_MCP_PAT}"
+        url = "https://api.github.com/repos/{}/{}/git/trees/{}".format(
+            quote(owner, safe=""), quote(repo, safe=""), quote(ref, safe="")
+        )
+        async with httpx.AsyncClient(
+            timeout=settings.GITHUB_READ_TIMEOUT_SECONDS, follow_redirects=False
+        ) as client:
+            response = await client.get(url, params={"recursive": "1"}, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+        if not isinstance(data, dict) or not isinstance(data.get("tree"), list):
+            raise ValueError("Invalid GitHub tree response")
+        return data
 
     async def init(self) -> None:
         headers = {}

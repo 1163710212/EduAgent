@@ -20,3 +20,9 @@ class GradeArtifact(BaseModel):
     passed_blanks: bool
     feedback_md: str
     suggestions: List[str] = Field(default_factory=list)
+
+
+class OverallArtifact(BaseModel):
+    feedback_md: str = Field(min_length=1)
+    strengths: List[str] = Field(default_factory=list, max_length=3)
+    suggestions: List[str] = Field(default_factory=list, max_length=3)

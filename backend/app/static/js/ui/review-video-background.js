@@ -65,6 +65,9 @@ if (layer && video) {
   video.addEventListener("loadeddata", markReady);
   video.addEventListener("canplay", markReady);
   video.addEventListener("error", markUnavailable);
+  video.querySelectorAll("source").forEach((source) => {
+    source.addEventListener("error", markUnavailable);
+  });
   document.addEventListener("visibilitychange", synchronize);
   motionPreference.addEventListener("change", synchronize);
   window.addEventListener("pagehide", () => {
@@ -83,6 +86,7 @@ if (layer && video) {
     }).observe(layer);
   }
 
-  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) markReady();
+  if (video.error || video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) markUnavailable();
+  else if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) markReady();
   else synchronize();
 }

@@ -1,5 +1,36 @@
 # Frontend verification
 
+## Three-question integration
+
+`check-three-questions.cjs` exercises the real HTTP endpoints, graphs, and a temporary
+SQLite database. Only the GitHub and LLM adapters are deterministic fixtures; the
+browser does not intercept application API requests. Nothing writes to the normal
+application database. Start the isolated server from `backend/`:
+
+```sh
+PYTHONPATH=.:tests .venv-local/bin/python -m uvicorn three_question_server:app --host 127.0.0.1 --port 8137
+```
+
+Then run `npm run check:workflow` from this directory. It covers both question types,
+three distinct files, empty-answer validation, one-way progression, persisted
+progress, per-question drafts, blocked browser storage, retrying failed assessment,
+visible per-question feedback before an explicit Continue, persisted feedback on reload,
+no early Review access, locked-answer recovery after a grading failure,
+overall-only Review (no individual scores/cards), synthesis retry, and reload without regrading.
+Screenshots are captured at 2466, 1440, 1280, 1024, 390 and 320 pixels. Solve checks
+also verify a full-width progress row, left brief/right wide response placement,
+stacking on smaller screens, non-overlapping headings, and viewport-sized video.
+External fonts/video requests
+are blocked in this suite to verify the application's fallback presentation.
+`EDUAGENT_BASE_URL` defaults to `http://127.0.0.1:8137` for this test; the browser,
+Playwright module, and screenshot directory overrides below also apply.
+
+On hosts with a virtual-address-space limit, Chromium may fail before loading any
+page with `Oilpan: Out of memory`. If permitted, run `ulimit -v unlimited` in the
+test shell; this changes only that shell's soft virtual-address-space limit.
+
+## Existing layout and animation regression
+
 The current checks cover all three independent pages at 2560, 1920, 1440, 1280,
 1024, 768, 390 and 320 CSS pixels, both explanation/completion journeys, file switching, validation,
 draft restoration, review reload and long content. Challenge API requests are
@@ -12,7 +43,7 @@ file controls and response counters remain intact.
 
 Create background checks cover its autoplaying, muted, looping MP4, clear unwashed
 rendering, fine-pointer parallax, reduced-motion/hidden-page pause and dark-surface fallback.
-Solve checks cover the prompt's third MP4 at a native-friendly 92% viewport fit,
+Solve checks cover the prompt's third MP4 at a 100% viewport fit (about 9% larger than the previous 92%),
 with softly blended edges, fine-pointer parallax,
 reduced-motion/hidden-page pause, static failure fallback and the 0.45× dimmed,
 desaturated focused-answer state. Review checks cover the separate Foldcraft

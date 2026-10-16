@@ -31,3 +31,27 @@ class Submission(SQLModel, table=True):
     evaluation_json: str
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class QuestionAnswer(SQLModel, table=True):
+    """Immutable accepted answer; compound key prevents duplicate advancement."""
+    session_id: str = Field(primary_key=True)
+    question_id: str = Field(primary_key=True)
+    position: int
+    explanation_md: str
+    filled_files_json: str
+    evaluation_json: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class WorkflowReview(SQLModel, table=True):
+    session_id: str = Field(primary_key=True)
+    evaluation_json: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class QuestionFeedbackReceipt(SQLModel, table=True):
+    """Explicit Continue acknowledgement, separate from immutable grades."""
+    session_id: str = Field(primary_key=True)
+    question_id: str = Field(primary_key=True)
+    created_at: datetime = Field(default_factory=datetime.utcnow)

@@ -25,7 +25,7 @@
     />
     <link rel="stylesheet" href="/static/styles.css?v=20260922-clear-video" />
     <link rel="stylesheet" href="/static/optical-background.css?v=20260922-clear-video" />
-    <link rel="stylesheet" href="/static/workflow-theme.css?v=20260922-clear-video" />
+    <link rel="stylesheet" href="/static/workflow-theme.css?v=20261014-overall-only" />
   </head>
   <body class="review-page">
     <div
@@ -80,6 +80,10 @@
           <span class="spinner-dark"></span>
           <p>Loading feedback…</p>
         </div>
+        <div class="review-status-bar">
+          <p id="reviewStatus" class="status-message light-status" role="status" aria-live="polite"></p>
+          <button id="retryReview" class="ghost-btn hidden" type="button">Retry assessment</button>
+        </div>
         <div id="reviewContent" class="workspace-content hidden">
           <section
             class="workspace-card evaluation-card"
@@ -113,7 +117,7 @@
         ><i class="ph ph-arrow-up"></i
       ></a>
     </footer>
-    <script type="module" src="/static/js/pages/review.js"></script>
+    <script type="module" src="/static/js/pages/review.js?v=20261014-overall-only"></script>
     <script type="module" src="/static/js/ui/review-video-background.js"></script>
     <script type="module" src="/static/js/ui/scene-transition.js"></script>
     <script type="module" src="/static/js/ui/pointer-glow.js"></script>
