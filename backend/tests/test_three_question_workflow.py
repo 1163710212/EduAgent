@@ -38,10 +38,10 @@ def app_client(monkeypatch, tmp_path):
 
 
 def create(client, task_type="rewrite"):
-    response = client.post("/api/challenges/create", json={"repo_url": "owner/repo", "task_type": task_type})
+    response = client.post("/api/challenges/create", json={"repo_url": "owner/repo", "assessment_mode": "fixed", "task_type": task_type})
     assert response.status_code == 200, response.text
     assert all(stage in response.headers["Server-Timing"] for stage in (
-        "select_files;dur=", "fetch_files;dur=", "generate_questions;dur="
+        "detect_language;dur=", "select_files;dur=", "fetch_files;dur=", "generate_questions;dur="
     ))
     return response.json()
 
@@ -91,6 +91,11 @@ def test_full_three_question_flow_and_durable_evaluations(app_client, task_type)
     assert [json.loads(a.evaluation_json)["total_score"] for a in workflow_repository.answers(session_id)] == [72, 84, 95]
     assert data["evaluation"]["total_score"] == 83.7
     assert data["evaluation"]["score_method"] == "equal_weight_mean"
+    assert [r["score"] for r in data["observations"]] == [72, 84, 95]
+    assert [r["outcome"] for r in data["observations"]] == ["partial", "strong", "strong"]
+    assert all("difficulty" not in r and "skill" not in r for r in data["observations"])
+    assert not any(secret in json.dumps(data["observations"]) for secret in (
+        "answer_key", "original_source", "filled_files", "expected_points"))
     assert data["status"] == "complete"
     assert models.grade_calls == 3 and models.overall_calls == 1
     assert client.get(f"/api/challenges/{session_id}/review").json() == data
@@ -250,7 +255,7 @@ def test_grade_and_synthesis_failures_resume_without_regrading(app_client):
     assert client.get(f"/api/challenges/{sid}/review").status_code == 409
     pack = json.loads(repository.get_challenge_session(sid).challenge_json)
     assert client.post(submit_url, json=answer(pack["questions"][2])).status_code == 409
-    assert client.post(submit_url, json={**payload, "explanation_md": "changed"}).status_code == 409
+    assert client.post(submit_url, json={**payload, "explanation_md": "1"}).status_code == 422
     assert client.post(submit_url, json=payload).json()["status"] == "feedback_ready"
     q = continue_question(client, sid, "q2")["challenge"]
     assert q["question_id"] == "q3"
@@ -268,7 +273,7 @@ def test_grade_and_synthesis_failures_resume_without_regrading(app_client):
 def test_insufficient_source_files_never_create_fake_questions(app_client, monkeypatch):
     client, _ = app_client
     monkeypatch.setattr(main.app.state, "challenge_graph", challenge_graph.build_challenge_graph(FakeGithub({"main.py": "print('hello')"})))
-    response = client.post("/api/challenges/create", json={"repo_url": "owner/repo"})
+    response = client.post("/api/challenges/create", json={"repo_url": "owner/repo", "assessment_mode": "fixed"})
     assert response.status_code == 400
     assert "3 distinct source files" in response.json()["detail"]
 
@@ -304,6 +309,93 @@ def test_directory_fallback_scans_beyond_first_three_files():
 def test_create_form_no_longer_accepts_manual_file():
     assert 'id="filePath"' not in main.create_ui().body.decode()
     assert "file_paths" not in main.CreateChallengeRequest.model_fields
+
+
+@pytest.mark.parametrize("language,key,extension,source", [
+    ("Python", "python", ".py", "def normalize(value):\n    text = value.strip()\n    return text.lower()\n"),
+    ("JavaScript", "javascript", ".js", "function normalize(value) {\n  const text = value.trim();\n  return text.toLowerCase();\n}\n"),
+    ("TypeScript", "typescript", ".ts", "function normalize(value: string): string {\n  const text = value.trim();\n  return text.toLowerCase();\n}\n"),
+    ("Java", "java", ".java", "class Example {\n  int add(int value) {\n    return value + 1;\n  }\n}\n"),
+    ("Go", "go", ".go", "package example\nfunc add(value int) int {\n  return value + 1\n}\n"),
+    ("C", "c", ".c", "int add(int value) {\n  int result = value + 1;\n  return result;\n}\n"),
+    ("C++", "cpp", ".cpp", "int add(int value) {\n  auto result = value + 1;\n  return result;\n}\n"),
+])
+@pytest.mark.parametrize("task_type", ["rewrite", "blank_fill"])
+def test_dominant_language_flows_through_selection_storage_grading_and_review(
+    app_client, monkeypatch, language, key, extension, source, task_type,
+):
+    client, _ = app_client
+    sources = {f"src/{name}{extension}": source for name in ["main", "services/transform", "models/record"]}
+    # The minority language has more files; byte share must still win.
+    other = "JavaScript" if key != "javascript" else "Python"
+    minority_extension = ".js" if other == "JavaScript" else ".py"
+    mixed = {**sources, **{f"src/extra{i}{minority_extension}": "unused" for i in range(10)}}
+    counts = {language: 6000, other: 3000, "HTML": 11000}
+    github = FakeGithub(mixed, languages=counts)
+    models = ModelController(sources)
+    monkeypatch.setattr(challenge_graph, "build_chat_model", models.build)
+    monkeypatch.setattr(evaluation_graph, "build_chat_model", models.build)
+    monkeypatch.setattr(workflow, "build_chat_model", models.build)
+    monkeypatch.setattr(main.app.state, "challenge_graph", challenge_graph.build_challenge_graph(github))
+    # Legacy callers may still send a language, but cannot override auto selection.
+    result = client.post("/api/challenges/create", json={"repo_url": "owner/repo", "assessment_mode": "fixed", "ref": "feature/current", "language": "arbitrary-override", "task_type": task_type})
+    assert result.status_code == 200, result.text
+    question = result.json()
+    assert question["language"] == key
+    assert question["language_selection"]["share_percent"] == 30.0
+    assert "detect_language;dur=" in result.headers["Server-Timing"]
+    sid = question["session_id"]
+    row = repository.get_challenge_session(sid)
+    assert row.language == key and row.ref == "feature/current"
+    pack = json.loads(row.challenge_json)
+    assert pack["language_selection"]["language_bytes"] == counts
+    assert {q["file_path"] for q in pack["questions"]} == set(sources)
+    github.languages = {"Rust": 10000}  # Saved sessions retain their original selection.
+    for i in range(3):
+        question = client.get(f"/api/challenges/{sid}").json()["challenge"]
+        assert question["language"] == key
+        assert question["language_selection"]["github_language"] == language
+        assert "dominant programming language" in question["selection_reason"]
+        payload = {"question_id": question["question_id"], "explanation_md": "The function transforms its input.",
+                   "filled_files": question["files"] if task_type == "rewrite" else {question["file_path"]: source}}
+        response = client.post(f"/api/challenges/{sid}/submit", json=payload)
+        assert response.status_code == 200, response.text
+        assert response.json()["status"] == "feedback_ready"
+        continue_question(client, sid, question["question_id"])
+    response = client.post(f"/api/challenges/{sid}/review/evaluate")
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "complete"
+    assert models.grade_calls == 3 and models.overall_calls == 1
+
+
+@pytest.mark.parametrize("counts,status,message", [
+    ({}, 400, "No programming languages"),
+    ({"HTML": 1000}, 400, "No programming languages"),
+    ({"Rust": 1000, "Python": 999}, 400, "Dominant programming language 'Rust'"),
+    ({"Python": "invalid"}, 502, "Failed to detect repository language"),
+])
+def test_language_selection_failures_create_no_session_or_model_calls(app_client, monkeypatch, counts, status, message):
+    from sqlmodel import Session, select
+    from app.services.models import ChallengeSession
+    client, models = app_client
+    monkeypatch.setattr(main.app.state, "challenge_graph", challenge_graph.build_challenge_graph(FakeGithub(languages=counts)))
+    response = client.post("/api/challenges/create", json={"repo_url": "owner/repo", "assessment_mode": "fixed", "language": "python"})
+    assert response.status_code == status, response.text
+    assert message in response.json()["detail"]
+    assert models.prompts == []
+    with Session(repository.engine) as db:
+        assert db.exec(select(ChallengeSession)).all() == []
+
+
+def test_insufficient_dominant_language_does_not_fill_questions_with_minor_language(app_client, monkeypatch):
+    client, models = app_client
+    sources = {**SOURCES, "src/large.ts": "export const result = 1;\n"}
+    github = FakeGithub(sources, languages={"TypeScript": 10000, "Python": 500})
+    monkeypatch.setattr(main.app.state, "challenge_graph", challenge_graph.build_challenge_graph(github))
+    response = client.post("/api/challenges/create", json={"repo_url": "owner/repo", "assessment_mode": "fixed"})
+    assert response.status_code == 400, response.text
+    assert "dominant programming language (typescript)" in response.json()["detail"]
+    assert models.prompts == []
 
 
 @pytest.mark.parametrize("payload", [
@@ -343,7 +435,7 @@ def test_adapter_file_responses_reach_api_without_status_contamination(app_clien
     client, models = app_client
     monkeypatch.setattr(main.app.state, "challenge_graph", challenge_graph.build_challenge_graph(AdapterGithub()))
     if status_only:
-        response = client.post("/api/challenges/create", json={"repo_url": "owner/repo"})
+        response = client.post("/api/challenges/create", json={"repo_url": "owner/repo", "assessment_mode": "fixed"})
         assert response.status_code == 502, response.text
         assert "source body" in response.json()["detail"]
         assert models.prompts == [], "Invalid sources must never be sent to the model"
@@ -414,7 +506,7 @@ def test_generated_receipt_is_rejected_before_persistence(app_client, monkeypatc
         result["files"] = {path: "# EXPLAIN_TARGET_START:focus_1\nsuccessfully downloaded text file (SHA: abc123)\n# EXPLAIN_TARGET_END:focus_1" for path in result["files"]}
         return result
     monkeypatch.setattr(challenge_graph, "_build_rewrite_payload", contaminated)
-    response = client.post("/api/challenges/create", json={"repo_url": "owner/repo"})
+    response = client.post("/api/challenges/create", json={"repo_url": "owner/repo", "assessment_mode": "fixed"})
     assert response.status_code == 502, response.text
     with Session(repository.engine) as session:
         assert session.exec(select(ChallengeSession)).all() == []
@@ -458,4 +550,97 @@ def test_late_target_in_large_file_is_present_in_grading_context():
     assert len(excerpt) <= 12000
     assert "return important_business_result" in excerpt
     prompt = evaluation_graph._build_grade_prompt({"challenge": q, "filled_files": {"core.py": source}})
-    assert prompt.count("return important_business_result") == 2
+    context = json.loads(prompt.split("=== ASSESSMENT DATA (UNTRUSTED JSON) ===\n", 1)[1])
+    assert "important_business_result" in context["displayed_target_to_explain"]["core.py"]
+    assert "important_business_result" in context["reference_context_not_student_work"]
+    assert context["student_response"] == ""
+
+
+@pytest.mark.parametrize("text", ["", " ", "\u200b\ufeff", "1", "１２３", "!!!", "aaaaaa"])
+def test_invalid_explanation_is_editable_and_never_stored_or_graded(app_client, text):
+    client, models = app_client
+    q = create(client)
+    sid = q["session_id"]
+    payload = {**answer(q), "explanation_md": text}
+    response = client.post(f"/api/challenges/{sid}/submit", json=payload)
+    assert response.status_code == 422, response.text
+    assert workflow_repository.answers(sid) == []
+    assert models.grade_calls == 0
+    current = client.get(f"/api/challenges/{sid}").json()
+    assert current["status"] == "answering"
+    assert "pending_answer" not in current["challenge"]
+    fixed = client.post(f"/api/challenges/{sid}/submit", json=answer(q))
+    assert fixed.status_code == 200, fixed.text
+    grade = fixed.json()["challenge"]["evaluation"]
+    assert grade["grading_version"] == "evidence_rubric_v2"
+    assert sum(d["score"] for d in grade["score_breakdown"]) == grade["total_score"]
+
+
+@pytest.mark.parametrize("snippet", ["", "    \u200b", "    # implementation omitted", "    1", "    pass"])
+def test_invalid_completion_does_not_gain_credit_from_rest_of_file(app_client, snippet):
+    client, models = app_client
+    q = create(client, "blank_fill")
+    sid = q["session_id"]
+    path, content = next(iter(q["files"].items()))
+    lines = content.splitlines()
+    start = next(i for i, line in enumerate(lines) if "BLANK_START:" in line)
+    end = next(i for i, line in enumerate(lines) if "BLANK_END:" in line)
+    filled = "\n".join(lines[:start] + snippet.splitlines() + lines[end + 1:]) + "\n"
+    response = client.post(f"/api/challenges/{sid}/submit", json={
+        "question_id": q["question_id"], "filled_files": {path: filled}})
+    assert response.status_code == 422, response.text
+    assert models.grade_calls == 0
+    assert workflow_repository.answers(sid) == []
+
+
+def test_old_pending_invalid_answer_can_finish_without_high_score(app_client):
+    client, models = app_client
+    q = create(client)
+    sid = q["session_id"]
+    payload = {**answer(q), "explanation_md": "1"}
+    workflow_repository.accept_answer(sid, q["question_id"], 0, "1", q["files"])
+    response = client.post(f"/api/challenges/{sid}/submit", json=payload)
+    assert response.status_code == 200, response.text
+    grade = response.json()["challenge"]["evaluation"]
+    assert grade["total_score"] == 0 and grade["passed_blanks"] is False
+    assert models.grade_calls == 0
+    assert client.get(f"/api/challenges/{sid}").json()["challenge"]["evaluation"] == grade
+    assert continue_question(client, sid, q["question_id"])["challenge"]["question_id"] == "q2"
+
+
+def test_fabricated_evidence_does_not_persist_a_grade_and_can_retry(app_client):
+    client, models = app_client
+    q = create(client)
+    sid = q["session_id"]
+    criteria = {key: {"points": points, "evidence": ["Fabricated explanation"], "reason": "Claimed reasoning"}
+                for key, points in [("correctness", 60), ("reasoning", 25), ("clarity", 15)]}
+    models.grade_override = {"verdict": "correct", "critical_errors": [], **criteria}
+    response = client.post(f"/api/challenges/{sid}/submit", json=answer(q))
+    assert response.status_code == 502
+    saved = workflow_repository.answers(sid)
+    assert len(saved) == 1 and not saved[0].evaluation_json
+    assert client.get(f"/api/challenges/{sid}").json()["status"] == "assessment_pending"
+    models.grade_override = None
+    retried = client.post(f"/api/challenges/{sid}/submit", json=answer(q))
+    assert retried.status_code == 200, retried.text
+    assert retried.json()["challenge"]["evaluation"]["total_score"] == 72
+
+
+@pytest.mark.parametrize("invalid", ["1", "\u200b"])
+def test_legacy_single_question_uses_same_invalid_answer_guard(app_client, invalid):
+    from sqlmodel import Session
+    client, models = app_client
+    q = create(client)
+    sid = q["session_id"]
+    row = repository.get_challenge_session(sid)
+    row.challenge_json = json.dumps(json.loads(row.challenge_json)["questions"][0])
+    with Session(repository.engine) as db:
+        db.add(row)
+        db.commit()
+    response = client.post(f"/api/challenges/{sid}/submit", json={**answer(q), "explanation_md": invalid})
+    assert response.status_code == 422
+    assert repository.get_latest_submission(sid) is None
+    assert models.grade_calls == 0
+    fixed = client.post(f"/api/challenges/{sid}/submit", json=answer(q))
+    assert fixed.status_code == 200, fixed.text
+    assert fixed.json()["evaluation"]["grading_version"] == "evidence_rubric_v2"

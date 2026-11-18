@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="/static/styles.css?v=20261001-solve-layout" />
     <link rel="stylesheet" href="/static/optical-background.css?v=20261001-solve-layout" />
     <link rel="stylesheet" href="/static/workflow-theme.css?v=20261014-solve-feedback-cleanup" />
+    <link rel="stylesheet" href="/static/adaptive.css?v=20261112" />
   </head>
   <body class="solve-page">
     <div
@@ -88,9 +89,10 @@
 
         <div id="workspaceContent" class="workspace-content hidden">
           <div class="question-progress" aria-live="polite">
-            <span id="questionProgressLabel">Question 1 of 3</span>
-            <progress id="questionProgress" max="3" value="1" aria-label="Current question"></progress>
+            <span id="questionProgressLabel">Loading question</span>
+            <progress id="questionProgress" max="12" value="0" aria-label="Questions used out of the session limit"></progress>
             <span id="questionSavedCount">0 answers assessed</span>
+            <span id="adaptiveProgressNote" class="adaptive-progress-note hidden"></span>
           </div>
           <section
             class="challenge-view"
@@ -122,6 +124,7 @@
                 </div>
                 <ul id="challengeFiles" class="file-list"></ul>
                 <p id="selectionReason" class="selection-note"></p>
+                <p id="snippetDifficulty" class="selection-note hidden"></p>
               </div>
             </div>
           </section>
@@ -218,6 +221,7 @@
                   </div>
                 </div>
                 <div class="submit-row">
+                  <button id="btnSkip" class="ghost-btn hidden" type="button"><span>I don't know · Skip</span></button>
                   <button
                     id="btnSubmit"
                     class="button button-primary"
@@ -240,6 +244,7 @@
             <h2 id="questionAssessmentTitle" tabindex="-1">Question feedback</h2>
             <div id="questionReport" class="report" aria-live="polite"></div>
             <div class="submit-row">
+              <button id="btnFinish" class="ghost-btn hidden" type="button"><span>Finish with current evidence</span></button>
               <button id="btnContinue" class="button button-primary" type="button"><span>Continue to next question</span><i class="ph ph-arrow-right"></i></button>
             </div>
             <p id="continueLog" class="status-message light-status" role="status"></p>
@@ -260,7 +265,7 @@
     <div id="toast" class="toast" role="status" aria-live="polite">
       <i class="ph-duotone ph-check-circle"></i><span></span>
     </div>
-    <script type="module" src="/static/js/pages/solve.js?v=20261014-solve-feedback-cleanup"></script>
+    <script type="module" src="/static/js/pages/solve.js?v=20261112-adaptive"></script>
     <script type="module" src="/static/js/ui/solve-video-background.js"></script>
     <script type="module" src="/static/js/ui/solve-focus.js"></script>
     <script type="module" src="/static/js/ui/scene-transition.js"></script>

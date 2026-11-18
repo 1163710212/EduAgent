@@ -63,9 +63,13 @@ async function journey(browser, width, type, storageBlocked = false) {
   await noOverflow(page);
   await page.screenshot({ path: path.join(out, `create-${width}-${type}.png`), fullPage: true });
   await page.locator("#repoUrl").fill("owner/repo");
-  await page.locator("#taskType").selectOption(type);
-  await page.locator("#btnCreate").click();
-  await page.waitForURL("**/solve?session_id=**");
+  // The create page now starts adaptive explanations. Explicitly create legacy
+  // sessions via the compatible API to keep testing saved v2 workflows.
+  const created = await context.request.post(`${base}/api/challenges/create`, {
+    data: { repo_url: "owner/repo", task_type: type, assessment_mode: "fixed" },
+  });
+  assert.equal(created.status(), 200);
+  await page.goto(`${base}/solve?session_id=${(await created.json()).session_id}`);
   const sid = new URL(page.url()).searchParams.get("session_id");
   const paths = [];
   const callsBefore = await (await context.request.get(`${base}/__test__/calls`)).json();
@@ -82,8 +86,27 @@ async function journey(browser, width, type, storageBlocked = false) {
     await page.locator("#btnSubmit").click();
     await page.locator("#submitLog[data-status=error]").waitFor();
     assert.equal((await (await context.request.get(`${base}/api/challenges/${sid}`)).json()).completed_count, index);
+    if (index === 0) {
+      const beforeInvalid = await (await context.request.get(`${base}/__test__/calls`)).json();
+      const invalidAnswers = type === "rewrite" ? ["\u200b\ufeff", "1", "１２３", "!!!"] : ["\u200b", "# TODO", "1", "pass"];
+      for (const invalid of invalidAnswers) {
+        await editor.fill(invalid);
+        // fill() changes text without moving the pointer; leave the prior button
+        // hover before its position changes as the editor/error text resizes.
+        await page.mouse.move(0, 0);
+        await page.locator("#btnSubmit").click();
+        await page.locator("#submitLog[data-status=error]").waitFor();
+        await page.waitForFunction(() => !document.querySelector("#btnSubmit").disabled);
+        const state = await (await context.request.get(`${base}/api/challenges/${sid}`)).json();
+        assert.equal(state.status, "answering", "Invalid response stays editable");
+        assert.equal(state.completed_count, 0);
+        assert.equal(await editor.isDisabled(), false);
+        assert.equal(await editor.inputValue(), invalid, "Rejected answer is retained for correction");
+      }
+      assert.deepEqual(await (await context.request.get(`${base}/__test__/calls`)).json(), beforeInvalid, "Invalid responses never invoke grading");
+    }
     const value = type === "rewrite" ? `Question ${index + 1}: the function preserves the data contract and handles input in sequence.`
-      : ["return normalize(value)", "return text.lower()", 'return {"value": value, "length": len(value)}'][index];
+      : ["def run(value):\n    return normalize(value)", "text = value.strip()\nreturn text.lower()", 'def record(value):\n    return {"value": value, "length": len(value)}'][index];
     await editor.fill(value);
     if (!storageBlocked) {
       await page.reload();
@@ -104,9 +127,38 @@ async function journey(browser, width, type, storageBlocked = false) {
       assert.equal((await context.request.get(`${base}/api/challenges/${sid}/review`)).status(), 409);
       await page.reload();
       await page.locator("#workspaceContent").waitFor({ state: "visible" });
-      assert.equal(await editor.isDisabled(), true, "Saved answer stays locked after failed grading and reload");
+      assert.equal(await editor.isDisabled(), false, "An ungraded saved answer remains editable after reload");
+      assert.equal(await editor.inputValue(), value, "The failed answer is restored");
       assert.match(await page.locator("#btnSubmit").textContent(), /Retry assessment/);
+      if (width !== 2466) {
+        const invalidRevision = type === "rewrite" ? "1" : "# TODO";
+        await editor.fill(invalidRevision);
+        await page.mouse.move(0, 0);
+        await page.locator("#btnSubmit").click();
+        await page.locator("#submitLog[data-status=error]").waitFor();
+        await page.waitForFunction(() => !document.querySelector("#btnSubmit").disabled);
+        assert.equal(await editor.isDisabled(), false);
+        assert.equal(await editor.inputValue(), invalidRevision, "Invalid revision stays available for correction");
+        const unchanged = await (await context.request.get(`${base}/api/challenges/${sid}`)).json();
+        assert.deepEqual(unchanged.challenge.pending_answer, pending.challenge.pending_answer);
+        const revised = type === "rewrite"
+          ? "The function returns a record containing the original value and its length."
+          : value + "\n# Preserve the original value and its length.";
+        await editor.fill(revised);
+        assert.match(await page.locator("#btnSubmit").textContent(), /Submit revised answer/);
+        if (!storageBlocked) {
+          await page.reload();
+          await page.locator("#workspaceContent").waitFor({ state: "visible" });
+          assert.equal(await editor.inputValue(), revised, "Local revision must survive reload over the older saved answer");
+          await editor.fill("");
+          await page.reload();
+          await page.locator("#workspaceContent").waitFor({ state: "visible" });
+          assert.equal(await editor.inputValue(), "", "An intentionally cleared draft must stay empty");
+          await editor.fill(revised);
+        }
+      }
       await context.request.post(`${base}/__test__/fail-overall/true`);
+      await page.mouse.move(0, 0);
       await page.locator("#btnSubmit").click();
     }
     await page.locator("#questionAssessment").waitFor({ state: "visible" });
@@ -118,7 +170,13 @@ async function journey(browser, width, type, storageBlocked = false) {
     assert.equal(await editor.isDisabled(), true);
     const assessed = await (await context.request.get(`${base}/api/challenges/${sid}`)).json();
     assert.equal(assessed.status, "feedback_ready");
+    assert.equal(assessed.challenge.evaluation.grading_version, "evidence_rubric_v2");
+    assert.equal(assessed.challenge.evaluation.score_breakdown.reduce((total, item) => total + item.score, 0), assessed.challenge.evaluation.total_score);
     assert.equal(assessed.challenge.question_id, q.question_id);
+    if (index === 2 && width !== 2466) {
+      if (type === "rewrite") assert.equal(assessed.challenge.pending_answer.explanation_md, "The function returns a record containing the original value and its length.");
+      else assert.ok(Object.values(assessed.challenge.pending_answer.filled_files)[0].includes("# Preserve the original value and its length."));
+    }
     assert.equal((await context.request.get(`${base}/api/challenges/${sid}/review`)).status(), 409);
     const callsAtFeedback = await (await context.request.get(`${base}/__test__/calls`)).json();
     await page.reload();
@@ -143,6 +201,8 @@ async function journey(browser, width, type, storageBlocked = false) {
   await page.locator("#retryReview").click();
   await page.locator("body[data-review-ready=true]").waitFor();
   await page.locator('#ambientBackground[data-renderer="fallback"]').waitFor();
+  assert.equal(await page.locator(".review-score-bar").count(), 3);
+  assert.equal(await page.locator(".review-difficulty-path").count(), 0, "Legacy difficulty must not be invented");
   assert.equal(await page.locator(".question-score").count(), 0, "Individual results are not rendered in Review");
   assert.equal(await page.locator(".question-feedback").count(), 0);
   assert.match(await page.locator(".score-value").textContent(), /83\.7/);

@@ -3,7 +3,10 @@
   "private": true,
   "scripts": {
     "check": "node check-ui.cjs",
-    "check:workflow": "node check-three-questions.cjs"
+    "check:workflow": "node check-three-questions.cjs",
+    "check:repository": "node check-repository-preview.cjs",
+    "check:adaptive": "node check-adaptive.cjs",
+    "check:review-charts": "node check-review-charts.cjs"
   },
   "engines": {
     "node": ">=18"

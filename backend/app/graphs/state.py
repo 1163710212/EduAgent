@@ -9,9 +9,11 @@ class ChallengeState(TypedDict, total=False):
     repo: str
     ref: str
     language: str
+    language_selection: Dict[str, Any]
     task_type: str
     requested_paths: List[str]
     question_count: int
+    adaptive: bool
     timings: Dict[str, float]
 
     # from github
@@ -31,7 +33,6 @@ class EvalState(TypedDict, total=False):
     explanation_md: str
 
     # computed
-    diffs: Dict[str, Any]
     evaluation: Dict[str, Any]
 
     error: Optional[str]

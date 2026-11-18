@@ -1,4 +1,5 @@
 import { renderReport } from "./report.js";
+import { renderReviewCharts } from "./review-charts.js?v=20261112-viz";
 
 function element(tag, className, text) {
   const node = document.createElement(tag);
@@ -13,6 +14,7 @@ export function renderWorkflowReport(container, review) {
   overall.id = "overallReview";
   overall.append(element("h3", "review-section-title", "Overall assessment"));
   if (review.evaluation) {
+    renderReviewCharts(overall, review.observations);
     overall.append(element("p", "score-method", "Equal weight · Average of all three question scores. AI assessment; code was not executed."));
     const report = element("div", "");
     renderReport(report, review.evaluation, review.task_type);

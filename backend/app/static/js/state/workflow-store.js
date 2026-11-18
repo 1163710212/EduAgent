@@ -5,6 +5,7 @@ function emptyState() {
     sessionId: "",
     challenge: null,
     answerDraft: { explanation: "", completionCode: "" },
+    hasAnswerDraft: false,
     evaluation: null
   };
 }
@@ -43,19 +44,23 @@ export function cacheChallenge(challenge) {
   const current = read();
   const isSameSession = current.sessionId === challenge.session_id;
   const isSameQuestion = isSameSession && current.challenge?.question_id === challenge.question_id;
+  const sameSavedAnswer = isSameQuestion
+    && JSON.stringify(current.challenge?.pending_answer || null) === JSON.stringify(challenge.pending_answer || null);
+  const keepDraft = sameSavedAnswer && !challenge.evaluation;
   return write({
     ...emptyState(),
     ...(isSameSession ? current : {}),
     sessionId: challenge.session_id,
     challenge,
-    answerDraft: isSameQuestion ? current.answerDraft : emptyState().answerDraft,
+    answerDraft: keepDraft ? current.answerDraft : emptyState().answerDraft,
+    hasAnswerDraft: keepDraft && Boolean(current.hasAnswerDraft),
     evaluation: null
   });
 }
 
 export function saveAnswerDraft(answerDraft) {
   const current = read();
-  return write({ ...current, answerDraft: { ...current.answerDraft, ...answerDraft } });
+  return write({ ...current, hasAnswerDraft: true, answerDraft: { ...current.answerDraft, ...answerDraft } });
 }
 
 export function saveEvaluation(sessionId, evaluation) {

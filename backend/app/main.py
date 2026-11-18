@@ -18,6 +18,7 @@ from app.core.mcp import GitHubMCP
 from app.services.db import init_db
 from app.services import repository
 from app.services import workflow
+from app.services.assessment import submission_issues
 from app.graphs.challenge_graph import build_challenge_graph
 from app.graphs.evaluation_graph import build_evaluation_graph
 
@@ -29,12 +30,15 @@ logger = logging.getLogger(__name__)
 def _challenge_error_status(detail: str) -> int:
     normalized = detail.lower()
     infra_markers = (
+        "failed to detect repository language:",
         "failed to select files:",
         "failed to initialize file content tool:",
         "failed to fetch file",
         "failed to generate challenge artifact:",
     )
     client_markers = (
+        "no programming languages found",
+        "dominant programming language",
         "repo_url is required",
         "only github.com urls are supported",
         "invalid github repo url",
@@ -60,8 +64,13 @@ def _challenge_error_status(detail: str) -> int:
 class CreateChallengeRequest(BaseModel):
     repo_url: str = Field(min_length=1)
     ref: str = "main"
-    language: str = "python"
+    language: str | None = Field(
+        default=None, deprecated=True,
+        description="Ignored for new challenges. The backend selects the largest programming language by GitHub-reported code bytes.",
+    )
     task_type: Literal["rewrite", "blank_fill"] = "rewrite"
+    assessment_mode: Literal["adaptive", "fixed"] = Field(
+        default="adaptive", description="Adaptive short-code explanations; fixed retains the legacy three-question workflow.")
 
     @field_validator("repo_url")
     @classmethod
@@ -87,6 +96,10 @@ class CreateChallengeResponse(BaseModel):
     question_count: int
     file_path: str
     selection_reason: str
+    language_selection: Dict[str, Any] | None = None
+    difficulty: int | None = None
+    skill: str | None = None
+    adaptive: Dict[str, Any] | None = None
 
 
 class SubmitRequest(BaseModel):
@@ -117,6 +130,7 @@ class ReviewResponse(BaseModel):
     question_count: int = 1
     evaluated_count: int = 1
     status: str = "complete"
+    observations: List[Dict[str, Any]] = Field(default_factory=list)
 
 
 @asynccontextmanager
@@ -205,9 +219,9 @@ async def create_challenge(req: CreateChallengeRequest, response: Response):
     state = {
         "repo_url": req.repo_url,
         "ref": req.ref,
-        "language": req.language,
         "task_type": req.task_type,
         "question_count": 3,
+        "adaptive": req.task_type == "rewrite" and req.assessment_mode == "adaptive",
     }
 
     try:
@@ -234,7 +248,10 @@ async def create_challenge(req: CreateChallengeRequest, response: Response):
         raise HTTPException(status_code=500, detail="Invalid challenge artifact generated.")
     workflow.validate_sources(challenge, status=502)
     questions = challenge.get("questions", [])
-    if (not workflow.is_multi(challenge) or len(questions) != 3
+    if state["adaptive"]:
+        if challenge.get("workflow_version") != 3 or len(questions) != 1 or not challenge.get("candidate_pool"):
+            raise HTTPException(status_code=502, detail="Unable to prepare the adaptive explanation session.")
+    elif (not workflow.is_multi(challenge) or len(questions) != 3
             or len({q.get("file_path") for q in questions}) != 3):
         raise HTTPException(status_code=502, detail="The repository must produce three questions from distinct source files.")
     task_type = challenge.get("task_type", req.task_type)
@@ -248,7 +265,7 @@ async def create_challenge(req: CreateChallengeRequest, response: Response):
             owner=out["owner"],
             repo=out["repo"],
             ref=req.ref,
-            language=req.language,
+            language=out["language"],
             target_paths=out.get("target_paths", []),
             challenge=challenge,
         )
@@ -263,7 +280,7 @@ async def create_challenge(req: CreateChallengeRequest, response: Response):
     response.headers["Server-Timing"] = ", ".join(
         f"{stage};dur={seconds * 1000:.1f}"
         for stage, seconds in out.get("timings", {}).items()
-        if stage in {"select_files", "fetch_files", "generate_questions"}
+        if stage in {"detect_language", "select_files", "fetch_files", "generate_questions"}
     )
     return workflow.progress(row.id, challenge)["challenge"]
 
@@ -312,6 +329,9 @@ async def submit(session_id: str, req: SubmitRequest):
     workflow.validate_sources(challenge)
     if workflow.is_multi(challenge):
         return await workflow.accept(row, challenge, req.question_id, req.explanation_md, req.filled_files, app.state.eval_graph)
+    issues = submission_issues(challenge, req.explanation_md, req.filled_files)
+    if issues:
+        raise HTTPException(status_code=422, detail=" ".join(issues))
     graph = app.state.eval_graph
 
     state = {
@@ -324,10 +344,12 @@ async def submit(session_id: str, req: SubmitRequest):
     try:
         out = await graph.ainvoke(state)
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Evaluation pipeline failed: {e}")
+        logger.exception("Submission assessment failed: session=%s", session_id)
+        raise HTTPException(status_code=502, detail="Assessment could not be completed. You can edit your answer or retry.") from e
 
     if out.get("error"):
-        raise HTTPException(status_code=400, detail=out["error"])
+        logger.warning("Submission assessment failed: session=%s error=%s", session_id, out["error"])
+        raise HTTPException(status_code=502, detail="Assessment could not be completed. You can edit your answer or retry.")
 
     evaluation = out.get("evaluation")
     if not isinstance(evaluation, dict):
@@ -356,6 +378,35 @@ def continue_challenge(session_id: str, req: ContinueRequest):
     if not workflow.is_multi(challenge):
         raise HTTPException(status_code=409, detail="Single-question sessions have no next question.")
     return workflow.continue_after_feedback(session_id, challenge, req.question_id)
+
+
+def _adaptive_action(session_id: str, req: ContinueRequest, *, skip: bool):
+    from app.services import workflow_repository
+    row = repository.get_challenge_session(session_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Session not found")
+    challenge = json.loads(row.challenge_json)
+    workflow.validate_sources(challenge)
+    if challenge.get("workflow_version") != 3:
+        raise HTTPException(status_code=409, detail="This action requires an adaptive session.")
+    if req.question_id not in {q["question_id"] for q in challenge["questions"]}:
+        raise HTTPException(status_code=422, detail="A valid question_id is required.")
+    try:
+        pack = (workflow_repository.skip_adaptive(session_id, req.question_id) if skip else
+                workflow_repository.advance_adaptive(session_id, req.question_id, finish=True))
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return workflow.progress(session_id, pack)
+
+
+@app.post("/api/challenges/{session_id}/skip", response_model=SubmitResponse)
+def skip_question(session_id: str, req: ContinueRequest):
+    return _adaptive_action(session_id, req, skip=True)
+
+
+@app.post("/api/challenges/{session_id}/finish", response_model=SubmitResponse)
+def finish_session(session_id: str, req: ContinueRequest):
+    return _adaptive_action(session_id, req, skip=False)
 
 
 @app.get("/api/challenges/{session_id}/review", response_model=ReviewResponse)

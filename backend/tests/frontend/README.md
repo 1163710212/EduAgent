@@ -1,6 +1,56 @@
 # Frontend verification
 
-## Three-question integration
+## Repository preview integration
+
+Start the local development server with `--lifespan off` as described below, then
+run `npm run check:repository`. `check-repository-preview.cjs` serves the actual
+Create page and modules while intercepting public GitHub requests and challenge
+creation; no token, live repository, model or application database is required.
+
+Coverage includes default branch detection, readonly automatic question-language
+display, exclusion of client-side language overrides, branch changes and overrides,
+contributor and commit selection with keyboard support, safe rendering
+of repository strings, file-tree truncation, commit pagination totals, UTC day
+boundaries, duplicate submission prevention, creation during metadata loading,
+private/rate-limited previews, empty repositories, partial endpoint failures,
+refresh recovery, and switching/clearing repositories while requests are pending.
+It checks horizontal overflow at 1440, 1024, 390 and 320 pixels and
+saves screenshots to `/tmp/eduagent-repository-preview` by default. The environment
+overrides for browser, Playwright module, base URL and screenshot directory apply.
+
+## Review visualization checks
+
+`check-review-charts.cjs` uses the real review page and synthetic saved-report fixtures;
+it intercepts only report API reads and makes no grading or database writes. With either
+isolated server below running, execute `EDUAGENT_BASE_URL=http://127.0.0.1:8144 npm run check:review-charts`.
+
+Checks cover 1440, 1024, 768, 390 and 320 px, mixed results, genuine zero scores,
+skipped/unverified results, a single question, older three-question reports with and
+without per-question data, literal rendering of hostile strings, question selection,
+arrow/Home/End keyboard controls, linked evidence, data-table equivalence and reload
+without assessment requests. Both page and chart screenshots are saved under
+`/tmp/eduagent-review-charts`. The adaptive and legacy integration suites below also
+assert that actual saved API results produce the appropriate charts.
+
+## Adaptive explanation integration
+
+`check-adaptive.cjs` runs the actual application, graphs and temporary SQLite database
+against synthetic source/LLM adapters. These fixtures validate the workflow, not the
+accuracy of real-model difficulty estimates. Start from `backend/`:
+
+```sh
+PYTHONPATH=.:tests .venv-local/bin/python -m uvicorn adaptive_server:app --host 127.0.0.1 --port 8144
+```
+
+Then run `EDUAGENT_BASE_URL=http://127.0.0.1:8144 npm run check:adaptive` here.
+It covers the explanation-only creation page, original 2–3 line targets, L2→L3→L4
+and L2→L1 routing, six-question early stopping, twelve-question uncertain stopping,
+invalid submissions, saved drafts, editable answers after failed grading, feedback
+acknowledgement, skip/early finish, blocked browser storage, evidence reports and
+refresh without regrading. Screenshots at 1440, 390 and 320 px are saved to
+`/tmp/eduagent-adaptive-screenshots`. The same environment overrides below apply.
+
+## Legacy three-question integration
 
 `check-three-questions.cjs` exercises the real HTTP endpoints, graphs, and a temporary
 SQLite database. Only the GitHub and LLM adapters are deterministic fixtures; the
@@ -11,12 +61,18 @@ application database. Start the isolated server from `backend/`:
 PYTHONPATH=.:tests .venv-local/bin/python -m uvicorn three_question_server:app --host 127.0.0.1 --port 8137
 ```
 
-Then run `npm run check:workflow` from this directory. It covers both question types,
-three distinct files, empty-answer validation, one-way progression, persisted
+Then run `npm run check:workflow` from this directory. It explicitly creates fixed
+sessions through the compatible API (new UI sessions are adaptive). It covers both question types,
+three distinct files, empty/invisible/numeric explanation rejection, comment-only
+and no-op completion rejection, editable draft recovery after rejection without
+model calls, versioned score breakdown consistency, one-way progression, persisted
 progress, per-question drafts, blocked browser storage, retrying failed assessment,
 visible per-question feedback before an explicit Continue, persisted feedback on reload,
-no early Review access, locked-answer recovery after a grading failure,
-overall-only Review (no individual scores/cards), synthesis retry, and reload without regrading.
+no early Review access, editable-answer recovery after a grading failure,
+revised/cleared draft restoration over an older saved answer, invalid revision
+rejection without replacing the saved answer, successful resubmission of both
+explanation and code revisions, and locking only after a completed assessment,
+overall Review with question-score charts (no repeated per-question feedback cards), synthesis retry, and reload without regrading.
 Screenshots are captured at 2466, 1440, 1280, 1024, 390 and 320 pixels. Solve checks
 also verify a full-width progress row, left brief/right wide response placement,
 stacking on smaller screens, non-overlapping headings, and viewport-sized video.
@@ -54,7 +110,9 @@ the learning flow usable.
 The background remains root z-index 0 with pointer-events none; main/footer are 1.
 Create's primary module has no architectural image, wash, photo credit or depth
 script; its neutral background tint remains at 20% over the video.
-All three documents load `workflow-theme.css` last. It owns the shared cinematic
+All three documents load `workflow-theme.css`; Solve and Review additionally load
+`adaptive.css` for progress and evidence reporting. Review also loads `review-charts.css`
+for its SVG charts and question inspector. The shared theme owns the cinematic
 tokens, brand rail, step capsule, glass shell, ice work surface, action gradient,
 radius scale and responsive visual overrides without touching workflow state.
 The shared brand header stays in normal flow, scrolls out of view and has a fully

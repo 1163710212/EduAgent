@@ -1,16 +1,18 @@
-"""Assess each immutable answer before advancing; Review synthesizes saved grades."""
+"""Allow ungraded answer revisions; keep completed grades immutable."""
 import asyncio
 import json
-import re
+import logging
 from weakref import WeakValueDictionary
 
 from app.core.llm import build_chat_model
 from app.graphs.prompts import GradeArtifact, OverallArtifact
-from app.services import workflow_repository as storage
+from app.services import workflow_repository as storage, adaptive_workflow, repository
+from app.services.assessment import submission_issues
 from app.utils.source_context import source_context
 from app.utils.mcp_source import is_download_receipt
 
 _locks: WeakValueDictionary = WeakValueDictionary()
+logger = logging.getLogger(__name__)
 PUBLIC_FIELDS = ("question_id", "file_path", "selection_reason", "task_type", "title",
                  "language", "student_instructions_md", "files", "edits", "blanks")
 
@@ -22,7 +24,7 @@ class WorkflowError(Exception):
 
 
 def is_multi(challenge: dict) -> bool:
-    return challenge.get("workflow_version") == 2
+    return challenge.get("workflow_version") in (2, 3)
 
 
 def validate_sources(challenge: dict, *, status: int = 409) -> None:
@@ -41,6 +43,11 @@ def validate_sources(challenge: dict, *, status: int = 409) -> None:
 
 
 def progress(session_id: str, challenge: dict) -> dict:
+    if challenge.get("workflow_version") == 3:
+        # A concurrent Continue may have appended a question since this request
+        # started. Always project the authoritative persisted snapshot.
+        latest = repository.get_challenge_session(session_id)
+        return adaptive_workflow.progress(session_id, json.loads(latest.challenge_json))
     questions = challenge["questions"]
     accepted = storage.answers(session_id)
     completed = 0
@@ -62,6 +69,8 @@ def progress(session_id: str, challenge: dict) -> dict:
     if public:
         public.update(session_id=session_id, workflow_version=2,
                       question_index=continued, question_count=len(questions))
+        if challenge.get("language_selection"):
+            public["language_selection"] = challenge["language_selection"]
         if continued < len(accepted):
             pending = accepted[continued]
             public["pending_answer"] = {
@@ -86,20 +95,19 @@ async def accept(row, challenge: dict, question_id: str | None,
     if position is None:
         raise WorkflowError("A valid question_id is required.", 422)
     question = questions[position]
-    if set(files) != set(question["files"]) or any(not text.strip() for text in files.values()):
-        raise WorkflowError("Submit exactly the source file for this question; it cannot be empty.", 422)
-    if question["task_type"] == "rewrite":
-        if not explanation.strip():
-            raise WorkflowError("Explain the code before continuing.", 422)
-        if files != question["files"]:
-            raise WorkflowError("The source of an explanation question is read-only.", 422)
-    else:
-        if any(re.search(r"BLANK_START|BLANK_END|BLANK:", content) for content in files.values()):
-            raise WorkflowError("Complete the blank and remove its placeholders before continuing.", 422)
     lock = _locks.setdefault(session_id, asyncio.Lock())
     async with lock:
+        existing = next((a for a in storage.answers(session_id) if a.question_id == question_id), None)
+        unchanged = (existing is not None and existing.explanation_md == explanation
+                     and json.loads(existing.filled_files_json) == files)
+        if existing is None or (existing.evaluation_json is None and not unchanged):
+            issues = submission_issues(question, explanation, files)
+            if issues:
+                raise WorkflowError(" ".join(issues), 422)
+        # Validate every revision. An unchanged legacy invalid answer can still
+        # receive a deterministic zero, so an old pending session cannot get stuck.
         try:
-            storage.accept_answer(session_id, question_id, position, explanation, files)
+            storage.accept_answer(session_id, question_id, position, explanation, files, allow_revision=True)
         except ValueError as exc:
             raise WorkflowError(str(exc)) from exc
         answer = next(a for a in storage.answers(session_id) if a.question_id == question_id)
@@ -112,11 +120,16 @@ async def accept(row, challenge: dict, question_id: str | None,
                     raise ValueError(out["error"])
                 grade = GradeArtifact.model_validate(out.get("evaluation")).model_dump()
                 grade["task_type"] = question["task_type"]
-                storage.save_grade(session_id, question_id, grade)
             except Exception as exc:
+                logger.exception("Question assessment failed: session=%s question=%s", session_id, question_id)
                 raise WorkflowError(
-                    f"Question assessment failed; saved answers are safe. Retry this assessment to continue. {exc}", 502
+                    "Assessment could not be completed. Your answer is saved. You can edit it or retry assessment.", 502
                 ) from exc
+            try:
+                storage.save_grade(session_id, question_id, grade, explanation=answer.explanation_md,
+                                   files=json.loads(answer.filled_files_json))
+            except ValueError as exc:
+                raise WorkflowError(str(exc)) from exc
         return progress(session_id, challenge)
 
 
@@ -124,6 +137,9 @@ def continue_after_feedback(session_id: str, challenge: dict, question_id: str) 
     if question_id not in {q["question_id"] for q in challenge["questions"]}:
         raise WorkflowError("A valid question_id is required.", 422)
     try:
+        if challenge.get("workflow_version") == 3:
+            latest = storage.advance_adaptive(session_id, question_id)
+            return progress(session_id, latest)
         storage.acknowledge_feedback(session_id, question_id)
     except ValueError as exc:
         raise WorkflowError(str(exc)) from exc
@@ -131,6 +147,8 @@ def continue_after_feedback(session_id: str, challenge: dict, question_id: str) 
 
 
 def review(session_id: str, challenge: dict) -> dict:
+    if challenge.get("workflow_version") == 3:
+        return adaptive_workflow.review(session_id, challenge)
     accepted = storage.answers(session_id)
     questions = challenge["questions"]
     if len(accepted) != len(questions) or any(not a.evaluation_json for a in accepted):
@@ -139,14 +157,31 @@ def review(session_id: str, challenge: dict) -> dict:
     receipts = storage.acknowledged(session_id)
     if not evaluation and any(q["question_id"] not in receipts for q in questions):
         raise WorkflowError("Read each question's feedback and click Continue in Solve before opening Review.")
+    # Read-only chart projection for existing v2 sessions. Do not rewrite their
+    # saved overall reports or invent difficulty/skill metadata they never had.
+    from app.services.adaptive_policy import outcome
+    observations = []
+    for question, answer in zip(questions, accepted):
+        grade = json.loads(answer.evaluation_json)
+        key = question.get("answer_key", {})
+        observations.append({
+            "question_id": question["question_id"], "file_path": question["file_path"],
+            "start_line": key.get("start_line"), "end_line": key.get("end_line"),
+            "score": grade.get("total_score"),
+            "outcome": outcome(grade) if grade.get("score_breakdown") else "assessed",
+            "evidence": [quote for dimension in grade.get("score_breakdown", [])
+                         if dimension.get("key") == "correctness" for quote in dimension.get("evidence", [])],
+        })
     return {"session_id": session_id, "workflow_version": 2, "task_type": challenge["task_type"],
             "status": "complete" if evaluation else "evaluating",
             "question_count": len(questions), "evaluated_count": len(accepted),
-            "evaluation": evaluation}
+            "evaluation": evaluation, "observations": observations}
 
 
 async def evaluate_next(row, challenge: dict, graph) -> dict:
     """Synthesize once from saved grades; never grade individual answers here."""
+    if challenge.get("workflow_version") == 3:
+        return adaptive_workflow.evaluate(row.id, challenge)
     lock = _locks.setdefault(row.id, asyncio.Lock())
     async with lock:
         current = review(row.id, challenge)
@@ -176,7 +211,8 @@ async def evaluate_next(row, challenge: dict, graph) -> dict:
             result = await build_chat_model(temperature=0.1).with_structured_output(OverallArtifact).ainvoke(prompt)
             overall = OverallArtifact.model_validate(result).model_dump()
         except Exception as exc:
-            raise WorkflowError(f"Overall assessment failed; individual grades are saved. {exc}", 502) from exc
+            logger.exception("Overall assessment failed: session=%s", row.id)
+            raise WorkflowError("Overall assessment failed; individual grades are saved. Retry the overall assessment.", 502) from exc
         overall.update(total_score=score, passed_blanks=all(g["passed_blanks"] for g in grades),
                        task_type=challenge["task_type"], score_method="equal_weight_mean", question_count=len(grades))
         storage.save_overall(row.id, overall)

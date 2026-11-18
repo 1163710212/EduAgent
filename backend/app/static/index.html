@@ -25,6 +25,7 @@
     />
     <link rel="stylesheet" href="/static/styles.css?v=20260922-clear-video" />
     <link rel="stylesheet" href="/static/optical-background.css?v=20260922-clear-video" />
+    <link rel="stylesheet" href="/static/repository-explorer.css?v=20261103-bottom-action" />
     <link rel="stylesheet" href="/static/workflow-theme.css?v=20260922-clear-video" />
   </head>
   <body class="create-page">
@@ -143,12 +144,23 @@
                     inputmode="url"
                     autocomplete="url"
                     placeholder="github.com/owner/repository"
-                    aria-describedby="repoHelp"
+                    aria-describedby="repoHelp repoStatus"
                   />
+                  <span id="repoValidationIcon" aria-hidden="true"></span>
                 </div>
                 <small id="repoHelp"
                   >Public or authorized private repositories</small
                 >
+                <div class="repo-field-meta">
+                  <span id="repoStatus" role="status" aria-live="polite"></span>
+                  <button id="btnRefreshRepository" class="repo-refresh" type="button">Refresh preview</button>
+                </div>
+                <small class="repo-preview-help">Preview uses public GitHub data. Private repositories use the server's authorized access when generating a challenge.</small>
+                <div id="repoPreview" class="repo-preview" hidden>
+                  <strong id="repoPreviewName"></strong><span id="repoVisibility" class="repo-badge"></span>
+                  <dl><div><dt>Default branch</dt><dd id="repoDefaultBranch"></dd></div>
+                    <div><dt>GitHub top language</dt><dd id="repoLanguage"></dd></div></dl>
+                </div>
               </div>
               <div class="field">
                 <label for="ref">Branch</label>
@@ -158,16 +170,14 @@
                 </div>
               </div>
               <div class="field">
-                <label for="language">Language</label>
-                <div class="input-shell select-shell">
+                <label for="language">Question language</label>
+                <div class="input-shell">
                   <i class="ph ph-brackets-curly"></i
-                  ><select id="language">
-                    <option value="python" selected>Python</option>
-                    <option value="javascript">JavaScript</option>
-                    <option value="java">Java</option>
-                    <option value="go">Go</option></select
-                  ><i class="ph ph-caret-down select-chevron"></i>
+                  ><input id="language" value="Automatic" readonly aria-describedby="languageHelp" />
                 </div>
+              </div>
+              <div class="field field-wide">
+                <small id="languageHelp">The largest programming language by GitHub code bytes on the default branch. Questions use files from your selected branch.</small>
               </div>
             </div>
             <div class="form-group">
@@ -180,27 +190,52 @@
                 <div class="input-shell select-shell">
                   <i class="ph ph-crosshair"></i
                   ><select id="taskType">
-                    <option value="rewrite" selected>Explain code</option>
-                    <option value="blank_fill">Complete logic</option></select
+                    <option value="rewrite" selected>Explain 2–3 lines of code</option></select
                   ><i class="ph ph-caret-down select-chevron"></i>
                 </div>
               </div>
-              <p class="selection-note">Three key files. Three focused questions. Selected automatically.</p>
-            </div>
-            <div class="form-footer field-wide">
-              <p><i class="ph ph-lock-key"></i> Read-only access</p>
-              <button id="btnCreate" class="button button-accent" type="submit">
-                <span>Generate challenge</span><i class="ph ph-arrow-right"></i>
-              </button>
+              <p class="selection-note">Explain original 2–3 line snippets in the dominant programming language. Difficulty adapts to your answers. Aim for 6–12 questions; a smaller source pool may finish earlier.</p>
             </div>
           </form>
-          <pre
-            id="createLog"
-            class="status-message"
-            role="status"
-            aria-live="polite"
-          ></pre>
         </section>
+      </section>
+      <section id="repositoryExplorer" class="repository-explorer" aria-labelledby="repositoryExplorerTitle" hidden>
+        <div class="repo-explorer-heading">
+          <div><span class="step-label">Repository insights</span><h2 id="repositoryExplorerTitle">Explore before you practice</h2></div>
+          <p id="repositoryContext"></p>
+        </div>
+        <section id="repositoryFilesSection" class="repo-card" aria-labelledby="repositoryFilesTitle">
+          <header><h3 id="repositoryFilesTitle">Repository files</h3><span id="repositoryFilesCount"></span></header>
+          <div id="repositoryFiles"></div>
+        </section>
+        <div id="repositoryAnalytics" class="repo-analytics-grid">
+          <section class="repo-card" aria-labelledby="contributorsTitle">
+            <header><h3 id="contributorsTitle">Contributors</h3><span id="contributorsTotal"></span></header>
+            <div id="contributorsContent"></div>
+          </section>
+          <section class="repo-card" aria-labelledby="commitActivityTitle">
+            <header><h3 id="commitActivityTitle">Commit activity</h3><span id="commitTotal"></span></header>
+            <div id="commitsContent"></div>
+          </section>
+        </div>
+        <section class="repo-card" aria-labelledby="repositoryAnalysisTitle">
+          <header><h3 id="repositoryAnalysisTitle">Repository analysis</h3><span>Based on returned GitHub activity</span></header>
+          <div id="repositoryAnalysisSummary"></div>
+        </section>
+      </section>
+      <section class="create-actions" aria-label="Generate challenge">
+        <div class="form-footer">
+          <p><i class="ph ph-lock-key" aria-hidden="true"></i> Read-only access</p>
+          <button id="btnCreate" class="button button-accent" type="submit" form="challengeForm">
+            <span>Generate challenge</span><i class="ph ph-arrow-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        <pre
+          id="createLog"
+          class="status-message"
+          role="status"
+          aria-live="polite"
+        ></pre>
       </section>
     </main>
 
@@ -214,7 +249,7 @@
         ><i class="ph ph-arrow-up"></i
       ></a>
     </footer>
-    <script type="module" src="/static/js/pages/create.js"></script>
+    <script type="module" src="/static/js/pages/create.js?v=20261112-adaptive"></script>
     <script type="module" src="/static/js/ui/video-background.js"></script>
     <script type="module" src="/static/js/ui/scene-transition.js"></script>
     <script type="module" src="/static/js/ui/pointer-glow.js"></script>

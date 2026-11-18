@@ -1,0 +1,28 @@
+.question-progress { flex-wrap: wrap; }
+.adaptive-progress-note { flex-basis: 100%; line-height: 1.6; font-size: .78rem; }
+.submit-row { flex-wrap: wrap; gap: .8rem; }
+.adaptive-report { color: #e7f1fc; min-width: 0; }
+.adaptive-report h3 { color: #edf5ff; margin-bottom: .65rem; }
+.adaptive-summary, .adaptive-skills, .adaptive-evidence, .adaptive-next {
+  margin-top: 1.4rem; padding: clamp(1rem, 3vw, 1.8rem);
+  background: rgba(8, 21, 35, .94); border: 1px solid rgba(160, 198, 225, .25); border-radius: 20px;
+}
+.adaptive-eyebrow { color: #9bcaeb; font-size: .85rem; margin-bottom: .75rem; }
+.adaptive-report .adaptive-level { font-size: clamp(1.25rem, 3vw, 2rem); }
+.adaptive-levels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin-top: 1.4rem; }
+.adaptive-level-card { padding: 1.2rem; background: rgba(11, 25, 40, .9); border: 1px solid rgba(160, 198, 225, .2); border-radius: 16px; }
+.adaptive-level-card h3 { font-size: .95rem; }
+.adaptive-level-card p { font-size: .85rem; line-height: 1.6; }
+.adaptive-level-card[data-status="supported"] { border-color: #78b6a2; }
+.adaptive-level-card[data-status="conflicting"] { border-color: #c4a876; }
+.adaptive-skill { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1rem; padding: .8rem 0; border-top: 1px solid rgba(160, 198, 225, .15); font-size: .9rem; }
+.adaptive-skill span { color: #b7c6d7; }
+.adaptive-observation { padding: .9rem 0; border-top: 1px solid rgba(160, 198, 225, .15); overflow-wrap: anywhere; }
+.adaptive-observation summary { cursor: pointer; font-size: .9rem; line-height: 1.7; }
+.adaptive-observation blockquote { margin: .8rem 0; padding-left: 1rem; border-left: 2px solid #75b6ff; white-space: pre-wrap; font-size: .85rem; }
+.adaptive-next ul { margin-left: 1.2rem; line-height: 1.8; }
+@media (max-width: 1000px) { .adaptive-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) {
+  .adaptive-levels { grid-template-columns: 1fr; }
+  .submit-row > button { max-width: 100%; white-space: normal; }
+}

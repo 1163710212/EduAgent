@@ -116,6 +116,47 @@ def _extract_json_candidates(text: str) -> list[dict[str, Any]]:
     return candidates
 
 
+def _prefix_before_malformed_suggestions(text: str) -> dict[str, Any] | None:
+    """Keep complete JSON fields when only the optional suggestions value is broken.
+
+    Decode fields strictly and in order. Never repair/drop grading fields, nested
+    criteria or evidence. The caller must still validate every required field.
+    """
+    start = text.find("{")
+    if start < 0:
+        return None
+    decoder = json.JSONDecoder()
+    values: dict[str, Any] = {}
+    position = start + 1
+
+    def skip_space(index):
+        while index < len(text) and text[index].isspace():
+            index += 1
+        return index
+
+    while position < len(text):
+        try:
+            key, position = decoder.raw_decode(text, skip_space(position))
+        except ValueError:
+            return None
+        if not isinstance(key, str) or key in values:
+            return None
+        position = skip_space(position)
+        if position >= len(text) or text[position] != ":":
+            return None
+        position = skip_space(position + 1)
+        try:
+            value, position = decoder.raw_decode(text, position)
+        except ValueError:
+            return values if key == "suggestions" else None
+        values[key] = value
+        position = skip_space(position)
+        if position >= len(text) or text[position] != ",":
+            return None
+        position += 1
+    return None
+
+
 def _extract_relaxed_changed_file_candidate(text: str) -> dict[str, Any] | None:
     match = re.search(r'["\']changed_file["\']\s*:\s*', text, flags=re.IGNORECASE)
     if not match:
@@ -403,7 +444,7 @@ class LocalLlama3StructuredModel(Generic[SchemaT]):
             f"JSON Schema:\n{schema_json}"
         )
 
-    def _build_repair_prompt(self, raw_text: str) -> str:
+    def _build_repair_prompt(self, raw_text: str, validation_error: Exception | None = None) -> str:
         schema_json = json.dumps(self.schema.model_json_schema(), ensure_ascii=False)
         clipped = raw_text.strip()
         if len(clipped) > 24000:
@@ -413,6 +454,8 @@ class LocalLlama3StructuredModel(Generic[SchemaT]):
             "Repair it into one valid JSON object that satisfies the given JSON Schema.\n"
             "Output only the JSON object itself, with no explanation, code fences, or extra prefixes/suffixes.\n"
             "Preserve the original meaning as much as possible and do not invent unrelated information.\n\n"
+            "Escape embedded double quotes inside strings. Do not change scores or invent grading evidence.\n"
+            f"Validation problems to fix:\n{str(validation_error)[:8000] if validation_error else 'Invalid JSON or schema.'}\n\n"
             f"JSON Schema:\n{schema_json}\n\n"
             "Text to repair:\n"
             f"{clipped}"
@@ -433,6 +476,12 @@ class LocalLlama3StructuredModel(Generic[SchemaT]):
 
     def _parse_structured(self, raw_text: str) -> SchemaT:
         candidates = _extract_json_candidates(raw_text)
+        field = self.schema.model_fields.get("suggestions")
+        if field is not None and not field.is_required():
+            prefix = _prefix_before_malformed_suggestions(raw_text)
+            required = {name for name, item in self.schema.model_fields.items() if item.is_required()}
+            if prefix and required <= prefix.keys():
+                candidates.append(prefix)
         if not candidates:
             raise ValueError("Model output is not a valid JSON object.")
 
@@ -467,7 +516,7 @@ class LocalLlama3StructuredModel(Generic[SchemaT]):
                 first_error = e
                 first_preview = self._preview(raw_text)
 
-            repaired_text = self.base.invoke(self._build_repair_prompt(raw_text))
+            repaired_text = self.base.invoke(self._build_repair_prompt(raw_text, first_error))
             try:
                 return self._parse_structured(repaired_text)
             except Exception as e:
@@ -499,7 +548,7 @@ class LocalLlama3StructuredModel(Generic[SchemaT]):
                 first_error = e
                 first_preview = self._preview(raw_text)
 
-            repaired_text = await self.base.ainvoke(self._build_repair_prompt(raw_text))
+            repaired_text = await self.base.ainvoke(self._build_repair_prompt(raw_text, first_error))
             try:
                 return self._parse_structured(repaired_text)
             except Exception as e:

@@ -83,6 +83,11 @@ async function preparePage(browser, width, options = {}) {
       return original.call(this, keyframes, options);
     };
   });
+  // Repository preview is tested separately. Keep legacy workflow/layout checks
+  // deterministic and avoid live GitHub requests after the Create integration.
+  await page.route("https://api.github.com/**", route => route.fulfill({
+    status: 503, json: { message: "Preview unavailable in layout fixture" },
+  }));
   await page.route("**/api/challenges/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -499,11 +504,9 @@ async function checkCompletionJourney(browser) {
     },
   });
   try {
-    await page.goto(`${baseUrl}/create`);
-    await page.locator("#repoUrl").fill("github.com/owner/repository");
-    await page.locator("#taskType").selectOption("blank_fill");
-    await page.locator("#btnCreate").click();
-    await page.waitForURL("**/solve?session_id=**");
+    // Existing completion sessions remain readable; the creation UI now only
+    // offers adaptive explanations.
+    await page.goto(`${baseUrl}/solve?session_id=${blankChallenge.session_id}`);
     await page.locator("#completionCode").waitFor({ state: "visible" });
     assert.equal(await page.locator("#rewriteAnswerArea").isVisible(), false);
     await page

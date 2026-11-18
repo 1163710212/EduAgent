@@ -1,0 +1,85 @@
+/* Third-page visualizations. No effect on creation or answer composition. */
+.review-visualizations { margin: 1.8rem 0; color: #e7f1fc; min-width: 0; }
+.review-visualization-heading { display: flex; align-items: baseline; justify-content: space-between; gap: .6rem 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.review-visualization-heading h3 { margin: 0; font-size: 1.1rem; letter-spacing: -.02em; }
+.review-visualization-heading > span { color: #a7bacd; font-size: .8rem; }
+.review-chart-grid { display: grid; grid-template-columns: minmax(0, 2.15fr) minmax(220px, 1fr); gap: 1.1rem; }
+.review-chart-card {
+  min-width: 0; padding: clamp(1rem, 2vw, 1.5rem); border-radius: 22px;
+  border: 1px solid rgba(155, 193, 220, .22);
+  background: radial-gradient(ellipse at 90% 0%, rgba(71, 128, 148, .13), transparent 65%), #0b1b2a;
+  box-shadow: 0 8px 30px rgba(0, 6, 13, .1);
+}
+.review-chart-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: .6rem; margin-bottom: 1.1rem; }
+.review-chart-heading h4, .adaptive-skills .review-chart-heading h4 { color: #ecf4fc; font-size: 1rem; font-weight: 600; margin: 0 0 .4rem; letter-spacing: -.015em; }
+.review-chart-heading p { color: #afc1d2; font-size: .8rem; line-height: 1.6; margin: 0; }
+.review-chart-tag { flex-shrink: 0; font-family: "IBM Plex Mono", monospace; font-size: .62rem; letter-spacing: .06em; color: #a5cedb; padding: .35rem .5rem; border: 1px solid rgba(150, 191, 213, .2); border-radius: 6px; line-height: 1.5; }
+.review-chart-scroll { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: #526d83 #102334; border-radius: 10px; }
+.review-chart-scroll-hint { display: none; color: #aebfd1; font-size: .72rem; line-height: 1.6; margin: .6rem 0 0; }
+.review-journey-svg { display: block; width: 100%; min-width: 520px; }
+.review-chart-axis-title { fill: #a9bed0; font: 10px "IBM Plex Mono", monospace; letter-spacing: 1px; }
+.review-chart-tick { fill: #a7b9cb; font: 11px "IBM Plex Mono", monospace; }
+.review-chart-value { fill: #eff6fc; font: 11px "IBM Plex Mono", monospace; font-weight: 500; }
+.review-chart-gridline { stroke: #adc4d6; stroke-opacity: .13; stroke-dasharray: 3 5; }
+.review-chart-selection { fill: #91c3f1; fill-opacity: .07; stroke: #91c3f1; stroke-opacity: .18; }
+.review-chart-hit { cursor: pointer; }
+.review-score-bar { opacity: .95; }
+.review-question-picker { display: flex; flex-wrap: wrap; gap: .4rem; margin: .65rem 0 0; }
+.review-question-button {
+  background: #0d2334; color: #c7d5e2; border: 1px solid #365167; border-bottom: 3px solid var(--outcome-color);
+  padding: .45rem .65rem; min-height: 38px; min-width: 38px; border-radius: 8px; font: 500 .75rem "IBM Plex Mono", monospace;
+  cursor: pointer; transition: background .15s ease, border-color .15s ease;
+}
+.review-question-button:hover { background: #1c3548; }
+.review-question-button[aria-pressed="true"] { background: #233e50; color: #fff; border-color: var(--outcome-color); }
+.review-question-button:focus-visible, .review-evidence-link:focus-visible, .review-chart-data summary:focus-visible { outline: 2px solid #bcddf9; outline-offset: 4px; }
+.review-chart-note { color: #aebfd1; font-size: .78rem; line-height: 1.7; margin: .8rem 0 0; }
+.review-donut { max-width: 225px; width: 85%; margin: .5rem auto 1rem; }
+.review-donut svg { display: block; width: 100%; filter: drop-shadow(0 6px 14px rgba(0, 0, 0, .16)); }
+.review-donut-count { fill: #ecf5fc; font: 500 44px "Outfit", sans-serif; }
+.review-donut-label { fill: #a9bed0; font: 10px "IBM Plex Mono", monospace; letter-spacing: 2px; }
+.review-chart-legend { list-style: none; margin: 0; padding: 0; display: grid; gap: .7rem; }
+.review-chart-legend li { display: grid; grid-template-columns: 9px 1fr auto 38px; align-items: center; gap: .6rem; color: #d4e0eb; font-size: .8rem; }
+.review-chart-dot { width: 8px; height: 8px; background: var(--outcome-color); border-radius: 3px; }
+.review-chart-percent { color: #a5b9cc; font-size: .73rem; text-align: right; }
+.review-selected-question { padding: 1.2rem 1.5rem; margin-top: 1rem; background: #102334; border: 1px solid #345267; border-radius: 18px; min-width: 0; }
+.review-selected-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: .7rem; }
+.review-selected-status { color: var(--outcome-color); font-size: .8rem; font-weight: 500; }
+.review-selected-source { font-family: "IBM Plex Mono", monospace; font-size: .82rem; color: #ddebf5; overflow-wrap: anywhere; margin: .85rem 0; line-height: 1.7; }
+.review-selected-metrics { display: flex; flex-wrap: wrap; gap: .8rem 2.5rem; margin: .8rem 0 0; }
+.review-selected-metrics dt { color: #acbfd0; font-size: .72rem; margin-bottom: .3rem; }
+.review-selected-metrics dd { font-size: 1rem; color: #edf6fc; margin: 0; }
+.review-selected-quote { margin: 1rem 0 0; padding: .7rem 1rem; color: #d0dfeb; background: #0b1c2b; border-left: 2px solid #8fc7d4; border-radius: 0 8px 8px 0; font-size: .82rem; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 9rem; overflow-y: auto; }
+.review-evidence-link { border: 0; padding: .6rem 0; background: transparent; color: #a6d6f6; font: inherit; font-size: .8rem; cursor: pointer; margin-top: .5rem; text-decoration: underline; text-underline-offset: 4px; }
+.review-chart-data { margin-top: 1rem; color: #b9ccdc; font-size: .8rem; }
+.review-chart-data summary { cursor: pointer; padding: .4rem 0; }
+.review-table-scroll { overflow: auto; max-height: 26rem; margin-top: .7rem; }
+.review-chart-data table { border-collapse: collapse; width: 100%; min-width: 530px; font-size: .78rem; text-align: left; }
+.review-chart-data caption { text-align: left; padding: .5rem; }
+.review-chart-data th, .review-chart-data td { padding: .7rem; border-bottom: 1px solid #2b4356; vertical-align: top; }
+.review-chart-data td:last-child { overflow-wrap: anywhere; max-width: 340px; }
+.review-skill-row { padding: .8rem 0; }
+.review-skill-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: .3rem .8rem; align-items: baseline; margin-bottom: .6rem; font-size: .85rem; }
+.review-skill-heading strong { color: #e6f1fa; font-weight: 500; }
+.review-skill-heading span { font-size: .75rem; color: #adc1d1; }
+.review-skill-track { display: flex; height: 9px; border-radius: 20px; background: #203547; overflow: hidden; gap: 0; }
+.review-skill-segment { display: block; height: 100%; box-shadow: inset -2px 0 #102334; }
+.review-skill-row .review-chart-note { margin-top: .35rem; font-size: .72rem; }
+@media (max-width: 1100px) {
+  .review-chart-grid { grid-template-columns: minmax(0, 1fr); }
+  .review-distribution { display: grid; grid-template-columns: minmax(140px, .8fr) minmax(0, 1.2fr); gap: 0 1.5rem; align-items: center; }
+  .review-distribution .review-chart-heading { grid-column: 1 / -1; }
+  .review-donut { max-width: 185px; margin: 0 auto; }
+}
+@media (max-width: 600px) {
+  .review-chart-scroll-hint { display: block; }
+  .review-chart-heading { flex-wrap: wrap; }
+  .review-visualization-heading h3 { font-size: 1rem; }
+  .review-chart-card { border-radius: 16px; padding: .9rem; }
+  .review-distribution { display: block; }
+  .review-donut { width: 80%; max-width: 180px; margin: .4rem auto 1rem; }
+  .review-selected-question { padding: 1rem; }
+  .review-selected-metrics { gap: .8rem 1.2rem; }
+  .review-question-button { min-width: 40px; min-height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) { .review-question-button { transition: none; } }

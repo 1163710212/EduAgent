@@ -18,6 +18,10 @@ from app.core.mcp import GitHubMCP
 from app.graphs.state import ChallengeState
 from app.graphs.prompts import ChallengeArtifact, ExplainArtifact
 from app.services.file_importance import rank_source_paths, selection_reason, skip_directory
+from app.services.repository_language import (
+    LanguageSelectionError, language_extensions, matches_language,
+    search_language, select_dominant_language,
+)
 from app.utils.mcp_source import extract_file_text as _extract_text_from_file_payload
 
 logger = logging.getLogger(__name__)
@@ -81,7 +85,6 @@ async def node_parse_repo(state: ChallengeState) -> ChallengeState:
         state["owner"] = owner
         state["repo"] = repo
         state.setdefault("ref", "main")
-        state.setdefault("language", "python")
         task_type = (state.get("task_type") or "rewrite").strip().lower()
         if task_type not in ("rewrite", "blank_fill"):
             raise ValueError("task_type must be one of: rewrite, blank_fill")
@@ -93,20 +96,31 @@ async def node_parse_repo(state: ChallengeState) -> ChallengeState:
 
 
 def _language_extensions(language: str) -> List[str]:
-    return {
-        "python": [".py"],
-        "javascript": [".js", ".ts", ".jsx", ".tsx"],
-        "java": [".java"],
-        "cpp": [".cpp", ".cc", ".cxx", ".h", ".hpp"],
-        "go": [".go"],
-    }.get(language.lower(), [".py"])
+    return list(language_extensions(language))
+
+
+async def node_detect_language(state: ChallengeState, github: GitHubMCP) -> ChallengeState:
+    if state.get("error"):
+        return state
+    try:
+        counts = await asyncio.wait_for(
+            github.repository_languages(state["owner"], state["repo"]),
+            timeout=settings.GITHUB_READ_TIMEOUT_SECONDS,
+        )
+        selection = select_dominant_language(counts)
+        state["language"] = selection["language"]
+        state["language_selection"] = selection
+    except LanguageSelectionError as exc:
+        state["error"] = str(exc)
+    except Exception as exc:
+        state["error"] = f"Failed to detect repository language: {type(exc).__name__}: {exc}"
+    return state
 
 
 def _pick_paths_from_tree(tree: Any, language: str, max_files: int = 1) -> List[str]:
     """
     tree 返回结构随 MCP 实现而异，这里做尽量稳健的抽取。
     """
-    exts = _language_extensions(language)
 
     # 常见：{"tree": [{"path":"...","type":"blob"}, ...]}
     candidates: List[str] = []
@@ -122,7 +136,7 @@ def _pick_paths_from_tree(tree: Any, language: str, max_files: int = 1) -> List[
                     continue
                 if t and str(t).lower() not in ("blob", "file"):
                     continue
-                if any(p.endswith(ext) for ext in exts):
+                if matches_language(p, language):
                     # 简单避开虚拟环境/依赖目录
                     if re.search(r"(^|/)(venv|node_modules|dist|build|\.git)/", p):
                         continue
@@ -184,7 +198,7 @@ async def _pick_paths_from_directory_listing(
 ) -> List[str]:
     """Bounded parallel traversal, ranking after exploration rather than first-hit selection."""
     tool = github.tool("get_file_contents")
-    exts = _language_extensions(state.get("language", "python"))
+    language = state["language"]
     queue: List[tuple[str, int]] = [("/", 0)]
     candidates: List[str] = []
     scanned = 0
@@ -215,7 +229,7 @@ async def _pick_paths_from_directory_listing(
                 item_type = str(item.get("type") or "").lower()
                 if not path or skip_directory(path):
                     continue
-                if item_type in ("file", "blob") and any(path.lower().endswith(ext) for ext in exts):
+                if item_type in ("file", "blob") and matches_language(path, language):
                     candidates.append(path)
                 elif item_type in ("dir", "tree") and depth < max_depth and path not in visited:
                     visited.add(path)
@@ -256,9 +270,14 @@ async def node_select_files(state: ChallengeState, github: GitHubMCP) -> Challen
     if state.get("error"):
         return state
 
-    count = state.get("question_count", 1)
+    adaptive = state.get("adaptive", False)
+    count = 6 if adaptive else state.get("question_count", 1)
+    minimum = 1 if adaptive else count
     requested = _normalize_requested_paths(state.get("requested_paths") or [], max_files=count)
     if requested:
+        if (not minimum <= len(requested) <= count or any(not matches_language(path, state["language"]) for path in requested)):
+            state["error"] = f"No suitable code files found: requested paths must contain {count} distinct {state['language']} source files."
+            return state
         state["target_paths"] = requested
         return state
 
@@ -276,8 +295,8 @@ async def node_select_files(state: ChallengeState, github: GitHubMCP) -> Challen
         )
         decoded = _extract_json_from_mcp_payload(tree)
         tree = decoded if decoded is not None else tree
-        picked = _pick_paths_from_tree(tree, state.get("language", "python"), max_files=count)
-        if len(picked) >= count and not tree.get("truncated", False):
+        picked = _pick_paths_from_tree(tree, state["language"], max_files=count)
+        if len(picked) >= minimum and not tree.get("truncated", False):
             state["target_paths"] = picked
             return state
     except Exception as exc:
@@ -292,8 +311,8 @@ async def node_select_files(state: ChallengeState, github: GitHubMCP) -> Challen
                 tree_reader(state["owner"], state["repo"], state.get("ref", "main")),
                 timeout=settings.GITHUB_READ_TIMEOUT_SECONDS,
             )
-            picked = _pick_paths_from_tree(tree, state.get("language", "python"), max_files=count)
-            if not tree.get("truncated", False) and len(picked) >= count:
+            picked = _pick_paths_from_tree(tree, state["language"], max_files=count)
+            if not tree.get("truncated", False) and len(picked) >= minimum:
                 state["target_paths"] = picked
                 logger.info("File selection strategy=rest_tree selected=%d", len(picked))
                 return state
@@ -303,7 +322,7 @@ async def node_select_files(state: ChallengeState, github: GitHubMCP) -> Challen
     # 2) Some hosted MCP configurations expose directory listing but not tree traversal.
     try:
         picked = await _pick_paths_from_directory_listing(state, github, max_files=count)
-        if len(picked) >= count:
+        if len(picked) >= minimum:
             state["target_paths"] = picked
             return state
     except Exception:
@@ -312,8 +331,8 @@ async def node_select_files(state: ChallengeState, github: GitHubMCP) -> Challen
     # 3) search_code 兜底（用 GitHub 代码搜索语法）
     try:
         tool = github.tool("search_code")
-        lang = state.get("language", "python").lower()
-        query = f"repo:{state['owner']}/{state['repo']} language:{lang}"
+        lang = state["language"]
+        query = f"repo:{state['owner']}/{state['repo']} language:{search_language(lang)}"
         res = await _read_tool(tool, {"query": query, "perPage": 100, "page": 1})
         # 常见：{"items":[{"path":"..."}]}
         paths: List[str] = []
@@ -326,15 +345,19 @@ async def node_select_files(state: ChallengeState, github: GitHubMCP) -> Challen
                 for it in items:
                     if isinstance(it, dict) and it.get("path"):
                         paths.append(it["path"])
-        paths = rank_source_paths([p for p in paths if any(p.lower().endswith(ext) for ext in _language_extensions(lang))], count)
-        if len(paths) >= count:
+        paths = rank_source_paths([p for p in paths if matches_language(p, lang)], count)
+        if len(paths) >= minimum:
             state["target_paths"] = paths
             return state
     except Exception as e:
         state["error"] = f"Failed to select files: {e}"
         return state
 
-    state["error"] = f"No suitable code files found: this workflow requires {count} distinct source files in the selected language. Try another repository or language."
+    state["error"] = (
+        f"No suitable code files found: this workflow requires at least {minimum} distinct source files "
+        f"in the dominant programming language ({state['language']}) on ref '{state.get('ref', 'main')}'. "
+        "Try another repository or branch. Files from other languages will not be substituted."
+    )
     return state
 
 
@@ -700,6 +723,16 @@ async def node_generate_challenge(state: ChallengeState) -> ChallengeState:
     if state.get("error"):
         return state
 
+    if state.get("adaptive"):
+        from app.services.adaptive_challenge import generate_pack
+        try:
+            state["challenge"] = await generate_pack(state)
+        except Exception as exc:
+            logger.exception("Adaptive snippet generation failed")
+            state["error"] = (str(exc) if isinstance(exc, ValueError) and str(exc).startswith("No suitable code files found")
+                              else "Unable to prepare difficulty-rated snippets. Please retry challenge creation.")
+        return state
+
     if state.get("question_count", 1) > 1:
         semaphore = asyncio.Semaphore(settings.CHALLENGE_GENERATION_CONCURRENCY)
 
@@ -720,6 +753,12 @@ async def node_generate_challenge(state: ChallengeState) -> ChallengeState:
             question = child["challenge"]
             question.update(question_id=f"q{index + 1}", file_path=path,
                             selection_reason=selection_reason(path))
+            if state.get("language_selection"):
+                selected = state["language_selection"]
+                question["selection_reason"] += (
+                    f" Repository's dominant programming language: {selected['github_language']} "
+                    f"({selected['share_percent']:g}% of GitHub-reported language bytes on the default branch)."
+                )
             # Reference snapshots stay server-side, including blanked source.
             question["answer_key"]["original_source"] = state["files"][path]
             questions.append(question)
@@ -727,6 +766,8 @@ async def node_generate_challenge(state: ChallengeState) -> ChallengeState:
             "workflow_version": 2, "task_type": state["task_type"],
             "language": state["language"], "questions": questions,
         }
+        if state.get("language_selection"):
+            state["challenge"]["language_selection"] = state["language_selection"]
         return state
 
     try:
@@ -767,6 +808,9 @@ def build_challenge_graph(github: GitHubMCP):
     async def select_files_node(state: ChallengeState) -> ChallengeState:
         return await timed("select_files", node_select_files, state, github)
 
+    async def detect_language_node(state: ChallengeState) -> ChallengeState:
+        return await timed("detect_language", node_detect_language, state, github)
+
     async def fetch_files_node(state: ChallengeState) -> ChallengeState:
         return await timed("fetch_files", node_fetch_files, state, github)
 
@@ -774,12 +818,14 @@ def build_challenge_graph(github: GitHubMCP):
         return await timed("generate_questions", node_generate_challenge, state)
 
     g.add_node("parse_repo", node_parse_repo)
+    g.add_node("detect_language", detect_language_node)
     g.add_node("select_files", select_files_node)
     g.add_node("fetch_files", fetch_files_node)
     g.add_node("generate_challenge", generate_node)
 
     g.set_entry_point("parse_repo")
-    g.add_edge("parse_repo", "select_files")
+    g.add_edge("parse_repo", "detect_language")
+    g.add_edge("detect_language", "select_files")
     g.add_edge("select_files", "fetch_files")
     g.add_edge("fetch_files", "generate_challenge")
     g.add_edge("generate_challenge", END)

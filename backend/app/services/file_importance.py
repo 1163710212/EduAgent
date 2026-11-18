@@ -32,7 +32,7 @@ def rank_source_paths(paths: list[str], limit: int) -> list[str]:
         and PurePosixPath(p).stem not in {"__init__", "__main__", "setup", "conftest"}
         and not NON_SOURCE_DIRECTORY.search(p)
         and not re.search(r"(^|/)(test_|.*[._](test|spec)\.)", p, re.I)
-        and not re.search(r"(\.min\.|\.generated\.|\.d\.ts$|_test\.go$)", p)
+        and not re.search(r"(\.min\.|\.generated\.|\.d\.[cm]?ts$|_test\.go$)", p, re.I)
     }
     selected: list[str] = []
     weights = {"entry point": 100, "core logic": 90, "request handling": 80,

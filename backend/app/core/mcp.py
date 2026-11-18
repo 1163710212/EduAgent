@@ -9,6 +9,7 @@ import httpx
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from app.core.config import settings
+from app.services.repository_language import validate_language_bytes
 
 
 @dataclass
@@ -19,6 +20,25 @@ class GitHubMCP:
     """
     client: Optional[MultiServerMCPClient] = None
     tools_by_name: Optional[Dict[str, Any]] = None
+
+    async def repository_languages(self, owner: str, repo: str) -> dict[str, int]:
+        """GitHub's repository language statistics, measured in source bytes.
+
+        This endpoint has no ref parameter: statistics describe the default
+        branch. Authentication is server-side and credentials never follow redirects.
+        """
+        headers = {"Accept": "application/vnd.github+json"}
+        if settings.GITHUB_MCP_PAT:
+            headers["Authorization"] = f"Bearer {settings.GITHUB_MCP_PAT}"
+        url = "https://api.github.com/repos/{}/{}/languages".format(
+            quote(owner, safe=""), quote(repo, safe="")
+        )
+        async with httpx.AsyncClient(
+            timeout=settings.GITHUB_READ_TIMEOUT_SECONDS, follow_redirects=False
+        ) as client:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            return validate_language_bytes(response.json())
 
     async def repository_tree(self, owner: str, repo: str, ref: str) -> dict:
         """Read-only fast path when the MCP server does not expose Git trees.

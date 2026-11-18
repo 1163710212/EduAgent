@@ -29,6 +29,21 @@ function leadingWhitespace(line) {
   return String(line || "").match(/^\s*/)?.[0] || "";
 }
 
+export function explanationValidationError(text) {
+  const visible = String(text || "").normalize("NFKC")
+    .replace(/[\p{Cc}\p{Cf}\u115f\u1160\u17b4\u17b5\u2800\u3164\uffa0]/gu, "").trim();
+  const letters = visible.match(/\p{L}/gu) || [];
+  if (!visible || !letters.length) {
+    return "Explain what the highlighted code does; whitespace, symbols or a number alone are not an explanation.";
+  }
+  const compact = visible.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
+  if (["idk", "na", "none", "null", "undefined", "todo", "test", "不知道", "不懂", "无", "略"].includes(compact)
+      || new Set(letters.join("").toLowerCase()).size === 1) {
+    return "Provide an explanation of the highlighted code instead of a placeholder or repeated characters.";
+  }
+  return "";
+}
+
 function escapeRegExp(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -99,7 +114,8 @@ export function buildSubmission(challenge, answer) {
 
   if (taskType === "rewrite") {
     const explanation = String(answer.explanation || "");
-    if (!explanation.trim()) throw new Error("Add your explanation before submitting.");
+    const issue = explanationValidationError(explanation);
+    if (issue) throw new Error(issue);
     return { explanation_md: explanation, filled_files: files };
   }
 

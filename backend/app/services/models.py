@@ -34,7 +34,7 @@ class Submission(SQLModel, table=True):
 
 
 class QuestionAnswer(SQLModel, table=True):
-    """Immutable accepted answer; compound key prevents duplicate advancement."""
+    """Answer is editable until graded; compound key prevents duplicate advancement."""
     session_id: str = Field(primary_key=True)
     question_id: str = Field(primary_key=True)
     position: int

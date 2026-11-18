@@ -55,3 +55,11 @@ export function continueChallenge(sessionId, questionId) {
 export function evaluateNext(sessionId) {
   return request(`/api/challenges/${encodeURIComponent(sessionId)}/review/evaluate`, { method: "POST" });
 }
+
+export function adaptiveAction(sessionId, questionId, action) {
+  if (!["skip", "finish"].includes(action)) throw new Error("Unknown practice action.");
+  return request(`/api/challenges/${encodeURIComponent(sessionId)}/${action}`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question_id: questionId }),
+  });
+}

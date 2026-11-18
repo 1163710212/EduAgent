@@ -1,4 +1,4 @@
-import { getChallenge, submitChallenge, continueChallenge } from "../api/challenges.js?v=20261014-feedback-gate";
+import { getChallenge, submitChallenge, continueChallenge, adaptiveAction } from "../api/challenges.js?v=20261112-adaptive";
 import { renderReport } from "../ui/report.js?v=20261014-solve-feedback-cleanup";
 import {
   buildSubmission,
@@ -12,7 +12,7 @@ import {
   saveEvaluation,
   sessionIdFromLocation,
   stepUrl,
-} from "../state/workflow-store.js";
+} from "../state/workflow-store.js?v=20261103-editable-assessment";
 import { renderChallengeSummary } from "../ui/challenge-view.js";
 import {
   byId,
@@ -32,6 +32,8 @@ import {
 let challenge = null;
 let files = {};
 let pendingAnswer = null;
+let actionPending = false;
+const skillLabels = { data_flow: "Data flow", control_flow: "Control flow", state_effects: "State and side effects", language_semantics: "Language semantics" };
 
 function showWorkspaceError(message) {
   byId("workspaceLoading").classList.add("hidden");
@@ -40,7 +42,10 @@ function showWorkspaceError(message) {
 }
 
 function updateSubmitLabel() {
-  const label = pendingAnswer ? "Retry assessment" : "Submit & view feedback";
+  const revised = pendingAnswer && (challenge.task_type === "rewrite"
+    ? byId("explanation").value !== pendingAnswer.explanation_md
+    : byId("completionCode").value !== savedCompletion());
+  const label = revised ? "Submit revised answer" : pendingAnswer ? "Retry assessment" : "Submit & view feedback";
   byId("btnSubmit").dataset.defaultLabel = label;
   byId("btnSubmit").querySelector("span").textContent = label;
 }
@@ -81,12 +86,20 @@ function renderWorkspace(state) {
   const index = challenge.question_index ?? 0;
   const count = challenge.question_count ?? 1;
   const assessed = index + (challenge.evaluation ? 1 : 0);
-  byId("questionProgressLabel").textContent = `Question ${index + 1} of ${count}`;
-  byId("questionProgress").max = count;
+  const adaptive = challenge.adaptive;
+  byId("questionProgressLabel").textContent = adaptive ? `Question ${index + 1} · Adaptive practice` : `Question ${index + 1} of ${count}`;
+  byId("questionProgress").max = adaptive?.maximum_questions || count;
   byId("questionProgress").value = index + 1;
-  byId("questionSavedCount").textContent = `${assessed} ${assessed === 1 ? "answer" : "answers"} assessed`;
+  byId("questionProgress").setAttribute("aria-label", adaptive ? "Questions used out of the session limit" : "Current question");
+  byId("questionSavedCount").textContent = adaptive
+    ? `${adaptive.valid_answers} assessed · ${adaptive.skipped_answers} skipped`
+    : `${assessed} ${assessed === 1 ? "answer" : "answers"} assessed`;
+  byId("adaptiveProgressNote").classList.toggle("hidden", !adaptive);
+  byId("adaptiveProgressNote").textContent = adaptive
+    ? `Aim for ${adaptive.minimum_answers} assessed answers; up to ${adaptive.maximum_questions} questions. The session may finish earlier if suitable snippets run out.` : "";
+  byId("snippetDifficulty").classList.toggle("hidden", !adaptive);
+  byId("snippetDifficulty").textContent = adaptive ? `L${challenge.difficulty} · ${skillLabels[challenge.skill] || challenge.skill} · Estimated snippet difficulty` : "";
   byId("selectionReason").textContent = challenge.selection_reason || "";
-  updateSubmitLabel();
 
   renderChallengeSummary(challenge, (path) => switchFile(path, true));
   loadFiles();
@@ -94,10 +107,12 @@ function renderWorkspace(state) {
   const isRewrite = challenge.task_type === "rewrite";
   byId("rewriteAnswerArea").classList.toggle("hidden", !isRewrite);
   byId("blankFillAnswerArea").classList.toggle("hidden", isRewrite);
-  byId("explanation").value = pendingAnswer?.explanation_md ?? state.answerDraft?.explanation ?? "";
-  byId("completionCode").value = pendingAnswer ? savedCompletion() : state.answerDraft?.completionCode || "";
-  byId("explanation").disabled = Boolean(pendingAnswer);
-  byId("completionCode").disabled = Boolean(pendingAnswer);
+  const useDraft = !challenge.evaluation && (!pendingAnswer || state.hasAnswerDraft);
+  byId("explanation").value = useDraft ? state.answerDraft?.explanation || "" : pendingAnswer?.explanation_md || "";
+  byId("completionCode").value = useDraft ? state.answerDraft?.completionCode || "" : pendingAnswer ? savedCompletion() : "";
+  byId("explanation").disabled = Boolean(challenge.evaluation);
+  byId("completionCode").disabled = Boolean(challenge.evaluation);
+  updateSubmitLabel();
   byId("explanation").style.height = "auto";
   byId("explanationCount").textContent =
     `${byId("explanation").value.trim().length} chars`;
@@ -109,20 +124,28 @@ function renderWorkspace(state) {
   }
   revealSection(byId("workspaceContent"));
   byId("btnSubmit").classList.toggle("hidden", Boolean(challenge.evaluation));
+  byId("btnSkip").classList.toggle("hidden", !adaptive || Boolean(pendingAnswer));
+  byId("btnFinish").classList.toggle("hidden", !adaptive || !challenge.evaluation || adaptive.next_action === "review");
   byId("questionAssessment").classList.toggle("hidden", !challenge.evaluation);
   byId("questionReport").replaceChildren();
   setLog(byId("continueLog"), "");
   if (challenge.evaluation) {
     byId("questionAssessmentTitle").textContent = `Question ${index + 1} feedback`;
-    renderReport(byId("questionReport"), challenge.evaluation, challenge.task_type, {
+    if (challenge.evaluation.response_status === "skipped") {
+      const note = document.createElement("p");
+      note.className = "selection-note";
+      note.textContent = challenge.evaluation.feedback_md;
+      byId("questionReport").append(note);
+    } else renderReport(byId("questionReport"), challenge.evaluation, challenge.task_type, {
       scoreLabel: "Question score", showSuggestions: false,
     });
-    const label = index + 1 === count ? "Continue to overall review" : "Continue to next question";
+    const last = adaptive ? adaptive.next_action === "review" : index + 1 === count;
+    const label = last ? "Continue to overall review" : "Continue to next question";
     byId("btnContinue").dataset.defaultLabel = label;
     byId("btnContinue").querySelector("span").textContent = label;
     setLog(byId("submitLog"), "Assessment complete. Read your feedback below, then continue.", "success");
   } else if (pendingAnswer) {
-    setLog(byId("submitLog"), "Your answer is saved and locked. Retry its assessment to continue.");
+    setLog(byId("submitLog"), "Your answer is saved but has not been assessed. You can edit it or retry assessment.");
   } else setLog(byId("submitLog"), "");
 }
 
@@ -164,11 +187,11 @@ async function loadWorkspace() {
 }
 
 async function handleSubmit() {
-  if (byId("btnSubmit").disabled || challenge?.evaluation) return;
+  if (actionPending || byId("btnSubmit").disabled || challenge?.evaluation) return;
   setLog(byId("submitLog"), "");
   let payload;
   try {
-    payload = pendingAnswer || buildSubmission(challenge, {
+    payload = buildSubmission(challenge, {
       explanation: byId("explanation").value,
       completionCode: byId("completionCode").value,
     });
@@ -183,12 +206,14 @@ async function handleSubmit() {
   }
 
   setButtonLoading(byId("btnSubmit"), true, "Assessing answer");
+  actionPending = true;
+  byId("btnSkip").disabled = true;
   byId("explanation").disabled = true;
   byId("completionCode").disabled = true;
   setLog(byId("submitLog"), "Saving and assessing your answer. Your feedback will appear below…");
   try {
     const response = await submitChallenge(challenge.session_id, payload);
-    if (response.workflow_version === 2 && response.challenge) {
+    if ([2, 3].includes(response.workflow_version) && response.challenge) {
       renderWorkspace(cacheChallenge(response.challenge));
       if (challenge.evaluation) focusFeedback();
       return;
@@ -201,7 +226,7 @@ async function handleSubmit() {
     );
     await navigateForward(stepUrl("review", challenge.session_id));
   } catch (error) {
-    // Recover the immutable saved answer even if the grading request failed or
+    // Recover the saved answer even if the grading request failed or
     // its response was lost. Never let a refresh skip an unassessed question.
     try {
       const response = await getChallenge(challenge.session_id);
@@ -221,9 +246,11 @@ async function handleSubmit() {
     } catch (_) { /* Preserve the current draft when the network is unavailable. */ }
     setLog(byId("submitLog"), error.message || String(error), "error");
   } finally {
+    actionPending = false;
+    byId("btnSkip").disabled = false;
     setButtonLoading(byId("btnSubmit"), false);
-    byId("explanation").disabled = Boolean(pendingAnswer);
-    byId("completionCode").disabled = Boolean(pendingAnswer);
+    byId("explanation").disabled = Boolean(challenge?.evaluation);
+    byId("completionCode").disabled = Boolean(challenge?.evaluation);
     updateSubmitLabel();
   }
 }
@@ -234,7 +261,9 @@ function focusFeedback() {
 }
 
 async function handleContinue() {
-  if (!challenge?.evaluation || byId("btnContinue").disabled) return;
+  if (actionPending || !challenge?.evaluation || byId("btnContinue").disabled) return;
+  actionPending = true;
+  byId("btnFinish").disabled = true;
   setButtonLoading(byId("btnContinue"), true, "Continuing…");
   try {
     const response = await continueChallenge(challenge.session_id, challenge.question_id);
@@ -249,7 +278,37 @@ async function handleContinue() {
   } catch (error) {
     setLog(byId("continueLog"), error.message || String(error), "error");
   } finally {
+    actionPending = false;
+    byId("btnFinish").disabled = false;
     setButtonLoading(byId("btnContinue"), false);
+  }
+}
+
+async function handleAdaptiveAction(action) {
+  if (actionPending || !challenge?.adaptive) return;
+  actionPending = true;
+  const button = byId(action === "skip" ? "btnSkip" : "btnFinish");
+  const log = byId(action === "skip" ? "submitLog" : "continueLog");
+  setButtonLoading(button, true, action === "skip" ? "Skipping…" : "Finishing…");
+  byId("btnSubmit").disabled = true;
+  byId("btnContinue").disabled = true;
+  byId("explanation").disabled = true;
+  try {
+    const response = await adaptiveAction(challenge.session_id, challenge.question_id, action);
+    if (response.status === "ready_for_review") {
+      await navigateForward(stepUrl("review", challenge.session_id));
+      return;
+    }
+    renderWorkspace(cacheChallenge(response.challenge));
+    if (challenge.evaluation) focusFeedback();
+  } catch (error) {
+    setLog(log, error.message || String(error), "error");
+  } finally {
+    actionPending = false;
+    setButtonLoading(button, false);
+    byId("btnSubmit").disabled = false;
+    byId("btnContinue").disabled = false;
+    byId("explanation").disabled = Boolean(challenge?.evaluation);
   }
 }
 
@@ -258,6 +317,8 @@ function bindEvents() {
   byId("fileSelect").addEventListener("change", (event) => switchFile(event.target.value));
   byId("btnSubmit").addEventListener("click", handleSubmit);
   byId("btnContinue").addEventListener("click", handleContinue);
+  byId("btnSkip").addEventListener("click", () => handleAdaptiveAction("skip"));
+  byId("btnFinish").addEventListener("click", () => handleAdaptiveAction("finish"));
   byId("copySession").addEventListener("click", async () => {
     const value = byId("sessionId").value.trim();
     if (!value) return;
@@ -270,11 +331,13 @@ function bindEvents() {
     event.target.style.height = "auto";
     event.target.style.height = `${Math.min(event.target.scrollHeight, 420)}px`;
     saveAnswerDraft({ explanation });
+    updateSubmitLabel();
   });
   byId("completionCode").addEventListener("input", (event) => {
     const completionCode = event.target.value;
     byId("completionCount").textContent = `${countLines(completionCode)} lines`;
     saveAnswerDraft({ completionCode });
+    updateSubmitLabel();
   });
 }
 
